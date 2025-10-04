@@ -30,8 +30,25 @@ export interface NodeInfo {
   properties: Record<string, any>;
 }
 
+// 新增：边/关系信息接口
+export interface EdgeInfo {
+  id: string;
+  source: string;
+  target: string;
+  relType: string;
+  color: string;
+  properties: Record<string, any>;
+}
+
 export interface NodeType {
   type: string;
   color: string;
   description: string;
+}
+
+// 新增：关系类型接口
+export interface RelationshipType {
+  type: string;
+  color: string;
+  count: number;
 }

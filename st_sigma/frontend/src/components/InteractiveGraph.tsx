@@ -4,14 +4,16 @@ import Sigma from 'sigma';
 import forceAtlas2 from 'graphology-layout-forceatlas2';
 import { Streamlit, withStreamlitConnection } from 'streamlit-component-lib';
 
-import LegendPanel, { NodeType } from './LegendPanel';
+import LegendPanel, { NodeType, RelationshipType } from './LegendPanel';
 import PropertiesPanel, { NodeInfo } from './PropertiesPanel';
+import RelationshipPropertiesPanel, { EdgeInfo } from './RelationshipPropertiesPanel';
 import { 
   StreamlitComponentArgs, 
   Neo4jGraphData 
 } from '../utils/types';
 import { 
-  extractUniqueLabels, 
+  extractUniqueLabels,
+  extractUniqueRelationshipTypes,
   convertNeo4jToGraph 
 } from '../utils/graphDataUtils';
 import { createLabelColorMap } from '../utils/colorUtils';
@@ -27,7 +29,9 @@ const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
   const sigmaRef = useRef<Sigma | null>(null);
   const graphRef = useRef<Graph | null>(null);
   const [selectedNode, setSelectedNode] = useState<NodeInfo | null>(null);
+  const [selectedEdge, setSelectedEdge] = useState<EdgeInfo | null>(null);
   const [nodeTypes, setNodeTypes] = useState<NodeType[]>([]);
+  const [relationshipTypes, setRelationshipTypes] = useState<RelationshipType[]>([]);
   
   // Drag state
   const draggedNodeRef = useRef<string | null>(null);
@@ -41,20 +45,17 @@ const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
   const componentHeight = args.height || 600;
 
   // 使用 useMemo 来稳定 graphData 的引用
-  // 只有当数据真正改变时才更新
   const stableGraphData = useMemo(() => {
     if (!graphData) return null;
     return JSON.stringify(graphData);
   }, [graphData]);
 
   useEffect(() => {
-    // 如果没有容器或数据，直接返回
     if (!containerRef.current || !graphData || !stableGraphData) {
       console.warn('Container or graph data not available');
       return;
     }
 
-    // 如果已经初始化过了，不要重复初始化
     if (initializedRef.current && sigmaRef.current) {
       console.log('Already initialized, skipping...');
       return;
@@ -66,6 +67,9 @@ const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
     // 提取唯一的 labels
     const uniqueLabels = extractUniqueLabels(graphData);
     
+    // 提取唯一的关系类型
+    const uniqueRelTypes = extractUniqueRelationshipTypes(graphData);
+    
     // 创建 label 到颜色的映射
     const labelColorMap = createLabelColorMap(uniqueLabels);
     
@@ -76,6 +80,18 @@ const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
       description: `${label} nodes`,
     }));
     setNodeTypes(legendData);
+
+    // 创建关系类型统计
+    const relTypeCount = new Map<string, number>();
+    graphData.relationships.forEach(rel => {
+      relTypeCount.set(rel.type, (relTypeCount.get(rel.type) || 0) + 1);
+    });
+    
+    const relTypesData: RelationshipType[] = uniqueRelTypes.map(type => ({
+      type: type,
+      count: relTypeCount.get(type) || 0,
+    }));
+    setRelationshipTypes(relTypesData);
 
     // 转换 Neo4j 数据为 Graphology 图
     const graph = convertNeo4jToGraph(graphData, labelColorMap);
@@ -97,8 +113,8 @@ const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
       labelColor: { color: '#4a4137' },
       labelSize: 14,
       labelWeight: '500',
-      renderEdgeLabels: false,
-      enableEdgeEvents: true,
+      renderEdgeLabels: true, // 启用边标签
+      enableEdgeEvents: true, // 启用边事件
     });
     sigmaRef.current = sigma;
 
@@ -150,6 +166,8 @@ const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
       const attrs = graph.getNodeAttributes(node);
       const neighbors = graph.neighbors(node);
 
+      // 关闭边面板，打开节点面板
+      setSelectedEdge(null);
       setSelectedNode({
         id: node,
         labels: attrs.labels || [],
@@ -168,8 +186,10 @@ const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
 
       // Reset all edges
       graph.forEachEdge((edge) => {
-        graph.setEdgeAttribute(edge, 'color', '#d4c4b0');
-        graph.setEdgeAttribute(edge, 'size', 2);
+        const baseColor = graph.getEdgeAttribute(edge, 'baseColor');
+        const baseSize = graph.getEdgeAttribute(edge, 'baseSize');
+        graph.setEdgeAttribute(edge, 'color', baseColor);
+        graph.setEdgeAttribute(edge, 'size', baseSize);
       });
 
       // Highlight selected node and neighbors
@@ -201,9 +221,59 @@ const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
       sigma.refresh();
     });
 
+    // Handle edge clicks - 新增
+    sigma.on('clickEdge', ({ edge }) => {
+      const attrs = graph.getEdgeAttributes(edge);
+      const [source, target] = graph.extremities(edge);
+      
+      // 获取源节点和目标节点的标签
+      const sourceLabel = graph.getNodeAttribute(source, 'label');
+      const targetLabel = graph.getNodeAttribute(target, 'label');
+
+      // 关闭节点面板，打开边面板
+      setSelectedNode(null);
+      setSelectedEdge({
+        id: edge,
+        source: sourceLabel,
+        target: targetLabel,
+        relType: attrs.relType || 'UNKNOWN',
+        color: '#CC8B65',
+        properties: attrs.properties || {},
+      });
+
+      // Reset all nodes
+      graph.forEachNode((n) => {
+        const baseSize = graph.getNodeAttribute(n, 'baseSize');
+        const baseColor = graph.getNodeAttribute(n, 'baseColor');
+        graph.setNodeAttribute(n, 'size', baseSize);
+        graph.setNodeAttribute(n, 'color', baseColor);
+        graph.removeNodeAttribute(n, 'highlighted');
+      });
+
+      // Reset all edges
+      graph.forEachEdge((e) => {
+        const baseColor = graph.getEdgeAttribute(e, 'baseColor');
+        const baseSize = graph.getEdgeAttribute(e, 'baseSize');
+        graph.setEdgeAttribute(e, 'color', baseColor);
+        graph.setEdgeAttribute(e, 'size', baseSize);
+      });
+
+      // Highlight selected edge and connected nodes
+      graph.setEdgeAttribute(edge, 'color', '#CC8B65');
+      graph.setEdgeAttribute(edge, 'size', 4);
+      
+      const sourceBaseSize = graph.getNodeAttribute(source, 'baseSize');
+      const targetBaseSize = graph.getNodeAttribute(target, 'baseSize');
+      graph.setNodeAttribute(source, 'size', sourceBaseSize * 1.3);
+      graph.setNodeAttribute(target, 'size', targetBaseSize * 1.3);
+
+      sigma.refresh();
+    });
+
     // Handle stage clicks
     sigma.on('clickStage', () => {
       setSelectedNode(null);
+      setSelectedEdge(null);
 
       graph.forEachNode((node) => {
         const baseSize = graph.getNodeAttribute(node, 'baseSize');
@@ -215,14 +285,16 @@ const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
       });
 
       graph.forEachEdge((edge) => {
-        graph.setEdgeAttribute(edge, 'color', '#d4c4b0');
-        graph.setEdgeAttribute(edge, 'size', 2);
+        const baseColor = graph.getEdgeAttribute(edge, 'baseColor');
+        const baseSize = graph.getEdgeAttribute(edge, 'baseSize');
+        graph.setEdgeAttribute(edge, 'color', baseColor);
+        graph.setEdgeAttribute(edge, 'size', baseSize);
       });
 
       sigma.refresh();
     });
 
-    // Hover effects
+    // Hover effects for nodes
     sigma.on('enterNode', ({ node }) => {
       if (!isDraggingRef.current) {
         document.body.style.cursor = 'grab';
@@ -253,6 +325,26 @@ const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
       sigma.refresh();
     });
 
+    // Hover effects for edges - 新增
+    sigma.on('enterEdge', ({ edge }) => {
+      document.body.style.cursor = 'pointer';
+      const currentSize = graph.getEdgeAttribute(edge, 'size');
+      graph.setEdgeAttribute(edge, 'size', currentSize * 1.5);
+      sigma.refresh();
+    });
+
+    sigma.on('leaveEdge', ({ edge }) => {
+      document.body.style.cursor = 'default';
+      const baseSize = graph.getEdgeAttribute(edge, 'baseSize');
+      // 如果这条边被选中了，保持放大状态
+      if (selectedEdge?.id === edge) {
+        graph.setEdgeAttribute(edge, 'size', 4);
+      } else {
+        graph.setEdgeAttribute(edge, 'size', baseSize);
+      }
+      sigma.refresh();
+    });
+
     // 通知 Streamlit 组件已准备好
     Streamlit.setComponentReady();
     Streamlit.setFrameHeight(componentHeight + 200);
@@ -266,7 +358,7 @@ const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
       }
       initializedRef.current = false;
     };
-  }, [stableGraphData]); // 只依赖于 stableGraphData
+  }, [stableGraphData]);
 
   // 单独的 effect 来处理高度变化
   useEffect(() => {
@@ -291,7 +383,7 @@ const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
     <div className="graph-container">
       <div className="header">
         <h2>Interactive Graph Visualization</h2>
-        <p className="subtitle">Click nodes for details • Drag to reposition • Hover to highlight</p>
+        <p className="subtitle">Click nodes/edges for details • Drag to reposition • Hover to highlight</p>
       </div>
 
       <div className="content-wrapper">
@@ -303,6 +395,7 @@ const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
 
         <LegendPanel 
           nodeTypes={nodeTypes}
+          relationshipTypes={relationshipTypes}
           graphOrder={graphRef.current?.order || 0}
           graphSize={graphRef.current?.size || 0}
         />
@@ -311,6 +404,13 @@ const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
           <PropertiesPanel 
             selectedNode={selectedNode}
             onClose={() => setSelectedNode(null)}
+          />
+        )}
+
+        {selectedEdge && (
+          <RelationshipPropertiesPanel 
+            selectedEdge={selectedEdge}
+            onClose={() => setSelectedEdge(null)}
           />
         )}
       </div>
