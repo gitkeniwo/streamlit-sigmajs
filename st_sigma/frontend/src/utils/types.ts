@@ -1,4 +1,4 @@
-// Neo4j 数据结构类型定义
+// Neo4j graph data types and interfaces
 export interface Neo4jNode {
   identity: number | string;
   labels: string[];
@@ -30,7 +30,7 @@ export interface NodeInfo {
   properties: Record<string, any>;
 }
 
-// 新增：边/关系信息接口
+// Export edge info interface
 export interface EdgeInfo {
   id: string;
   source: string;
@@ -46,7 +46,7 @@ export interface NodeType {
   description: string;
 }
 
-// 新增：关系类型接口
+// Export relationship type interface
 export interface RelationshipType {
   type: string;
   color: string;

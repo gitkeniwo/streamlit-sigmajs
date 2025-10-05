@@ -7,6 +7,7 @@ import { Streamlit, withStreamlitConnection } from 'streamlit-component-lib';
 import LegendPanel, { NodeType, RelationshipType } from './LegendPanel';
 import PropertiesPanel, { NodeInfo } from './PropertiesPanel';
 import RelationshipPropertiesPanel, { EdgeInfo } from './RelationshipPropertiesPanel';
+
 import { 
   StreamlitComponentArgs, 
   Neo4jGraphData 
@@ -18,7 +19,7 @@ import {
 } from '../utils/graphDataUtils';
 import { createLabelColorMap } from '../utils/colorUtils';
 
-import './InteractiveGraph.css';
+// import './InteractiveGraph.css';
 
 interface InteractiveGraphProps {
   args: StreamlitComponentArgs;
@@ -37,14 +38,14 @@ const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
   const draggedNodeRef = useRef<string | null>(null);
   const isDraggingRef = useRef(false);
   
-  // 用于追踪是否已经初始化
+  // For initialization tracking
   const initializedRef = useRef(false);
 
-  // 从 args 中获取数据
+  // Get data from args
   const graphData = args.graphData;
   const componentHeight = args.height || 600;
 
-  // 使用 useMemo 来稳定 graphData 的引用
+  // To avoid re-initialization on every render, memoize the graphData
   const stableGraphData = useMemo(() => {
     if (!graphData) return null;
     return JSON.stringify(graphData);
@@ -64,16 +65,16 @@ const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
     console.log('Initializing graph...');
     initializedRef.current = true;
 
-    // 提取唯一的 labels
+    // Extract unique labels
     const uniqueLabels = extractUniqueLabels(graphData);
     
-    // 提取唯一的关系类型
+    // Extract unique relationship types
     const uniqueRelTypes = extractUniqueRelationshipTypes(graphData);
     
-    // 创建 label 到颜色的映射
+    // Create label to color mapping
     const labelColorMap = createLabelColorMap(uniqueLabels);
     
-    // 创建 legend 数据
+    // Create legend data
     const legendData: NodeType[] = uniqueLabels.map(label => ({
       type: label,
       color: labelColorMap.get(label) || '#9B8579',
@@ -81,7 +82,7 @@ const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
     }));
     setNodeTypes(legendData);
 
-    // 创建关系类型统计
+    // Create relationship types data
     const relTypeCount = new Map<string, number>();
     graphData.relationships.forEach(rel => {
       relTypeCount.set(rel.type, (relTypeCount.get(rel.type) || 0) + 1);
@@ -93,11 +94,11 @@ const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
     }));
     setRelationshipTypes(relTypesData);
 
-    // 转换 Neo4j 数据为 Graphology 图
+    // Convert to graphology instance
     const graph = convertNeo4jToGraph(graphData, labelColorMap);
     graphRef.current = graph;
 
-    // 应用力导向布局
+    // Apply ForceAtlas2 layout
     forceAtlas2.assign(graph, {
       iterations: 100,
       settings: {
@@ -106,15 +107,15 @@ const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
       }
     });
 
-    // 创建 Sigma 实例
+    // Create Sigma instance
     const sigma = new Sigma(graph, containerRef.current, {
       defaultEdgeColor: '#d4c4b0',
       defaultNodeColor: '#9B8579',
       labelColor: { color: '#4a4137' },
       labelSize: 14,
       labelWeight: '500',
-      renderEdgeLabels: true, // 启用边标签
-      enableEdgeEvents: true, // 启用边事件
+      renderEdgeLabels: true, // Enable edge labels
+      enableEdgeEvents: true, // Enable edge events
     });
     sigmaRef.current = sigma;
 
@@ -166,7 +167,7 @@ const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
       const attrs = graph.getNodeAttributes(node);
       const neighbors = graph.neighbors(node);
 
-      // 关闭边面板，打开节点面板
+      // Close edge panel, open node panel
       setSelectedEdge(null);
       setSelectedNode({
         id: node,
@@ -221,16 +222,16 @@ const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
       sigma.refresh();
     });
 
-    // Handle edge clicks - 新增
+    // Handle edge clicks 
     sigma.on('clickEdge', ({ edge }) => {
       const attrs = graph.getEdgeAttributes(edge);
       const [source, target] = graph.extremities(edge);
       
-      // 获取源节点和目标节点的标签
+      // Get source and target node labels
       const sourceLabel = graph.getNodeAttribute(source, 'label');
       const targetLabel = graph.getNodeAttribute(target, 'label');
 
-      // 关闭节点面板，打开边面板
+      // Close node panel, open edge panel
       setSelectedNode(null);
       setSelectedEdge({
         id: edge,
@@ -325,7 +326,7 @@ const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
       sigma.refresh();
     });
 
-    // Hover effects for edges - 新增
+    // Hover effects for edges 
     sigma.on('enterEdge', ({ edge }) => {
       document.body.style.cursor = 'pointer';
       const currentSize = graph.getEdgeAttribute(edge, 'size');
@@ -336,7 +337,7 @@ const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
     sigma.on('leaveEdge', ({ edge }) => {
       document.body.style.cursor = 'default';
       const baseSize = graph.getEdgeAttribute(edge, 'baseSize');
-      // 如果这条边被选中了，保持放大状态
+      // If this edge is selected, keep it slightly larger
       if (selectedEdge?.id === edge) {
         graph.setEdgeAttribute(edge, 'size', 4);
       } else {
@@ -345,11 +346,11 @@ const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
       sigma.refresh();
     });
 
-    // 通知 Streamlit 组件已准备好
+    // Notify Streamlit that the component is ready
     Streamlit.setComponentReady();
     Streamlit.setFrameHeight(componentHeight + 200);
     
-    // 清理函数
+    // Trace cleanup function
     return () => {
       console.log('Cleaning up...');
       if (sigmaRef.current) {
@@ -360,14 +361,14 @@ const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
     };
   }, [stableGraphData]);
 
-  // 单独的 effect 来处理高度变化
+  // When componentHeight changes, update frame height
   useEffect(() => {
     if (initializedRef.current) {
-      Streamlit.setFrameHeight(componentHeight + 200);
+      Streamlit.setFrameHeight(componentHeight + 100);
     }
   }, [componentHeight]);
 
-  // 如果没有数据，显示提示
+  // If no data, show message
   if (!graphData) {
     return (
       <div className="graph-container">
@@ -379,20 +380,32 @@ const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
     );
   }
 
-  return (
-    <div className="graph-container">
-      <div className="header">
-        <h2>Interactive Graph Visualization</h2>
-        <p className="subtitle">Click nodes/edges for details • Drag to reposition • Hover to highlight</p>
-      </div>
 
-      <div className="content-wrapper">
+
+
+
+   return (
+    <div className="font-space-grotesk flex flex-col w-full h-screen bg-[#f4f1ea]">
+      {/* Header */}
+      {/* <div className="px-10 py-6 bg-[#fdfcfb] border-b border-[#e8e3d8] shadow-sm">
+        <h2 className="text-2xl font-medium text-[#1a1715] tracking-tight mb-2">
+          Interactive Graph Visualization
+        </h2>
+        <p className="text-sm text-[#6b5d4f]">
+          Click nodes/edges for details • Drag to reposition • Hover to highlight
+        </p>
+      </div> */}
+
+      {/* Content */}
+      <div className="flex flex-1 overflow-hidden relative p-6">
+        {/* Sigma Container */}
         <div 
           ref={containerRef} 
-          className="sigma-container" 
-          style={{ width: '100%', height: `${componentHeight}px` }} 
+          className="flex-1 bg-[#fdfcfb] rounded-2xl shadow-md border border-[#e8e3d8] relative"
+          style={{ height: `${componentHeight}px` }}
         />
 
+        {/* Panels */}
         <LegendPanel 
           nodeTypes={nodeTypes}
           relationshipTypes={relationshipTypes}
@@ -416,6 +429,9 @@ const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
       </div>
     </div>
   );
+
+
+
 };
 
 export default withStreamlitConnection(InteractiveGraph);

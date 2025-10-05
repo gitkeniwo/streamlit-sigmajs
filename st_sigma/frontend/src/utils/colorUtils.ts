@@ -1,6 +1,6 @@
-// 为不同的 labels 生成颜色
+// colorUtils.ts
 export const generateColorPalette = (count: number): string[] => {
-  // Vintage color palette - 可以扩展更多颜色
+  // Vintage color palette 
   const baseColors = [
     '#CC8B65', // Warm terracotta
     '#B4846C', // Dusty rose brown
@@ -16,7 +16,7 @@ export const generateColorPalette = (count: number): string[] => {
     '#9FA89A', // Sage gray
   ];
 
-  // 如果需要的颜色数量超过基础颜色，使用 HSL 生成更多
+  // If count is less than or equal to baseColors length, return a slice
   if (count <= baseColors.length) {
     return baseColors.slice(0, count);
   }
@@ -32,7 +32,7 @@ export const generateColorPalette = (count: number): string[] => {
   return colors;
 };
 
-// 为 labels 创建颜色映射
+// Create a mapping from labels to colors
 export const createLabelColorMap = (labels: string[]): Map<string, string> => {
   const colors = generateColorPalette(labels.length);
   const colorMap = new Map<string, string>();
