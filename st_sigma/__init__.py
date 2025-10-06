@@ -1,5 +1,7 @@
 import os
 import streamlit.components.v1 as components
+from neo4j.graph import Graph
+import datetime
 
 _RELEASE = True
 
@@ -34,6 +36,51 @@ else:
     _component_func = components.declare_component("", path=build_dir)
 
 
+def serialize_neo4j_value(val):
+    import math
+    import numpy as np
+    # Neo4j Date/Time types
+    if hasattr(val, 'isoformat'):
+        return val.isoformat()
+    if isinstance(val, (float, np.floating)) and (math.isnan(val) or math.isinf(val)):
+        return None
+    if val is None or val is np.nan:
+        return None
+    if isinstance(val, (list, tuple)):
+        return [serialize_neo4j_value(v) for v in val]
+    if isinstance(val, dict):
+        return {k: serialize_neo4j_value(v) for k, v in val.items()}
+    return val
+
+
+
+def neo4jgraph_to_sigma(result):      
+        # extract nodes and relationships
+        nodes = []
+        relationships = []
+                
+        
+        for node in result.nodes:
+            nodes.append({
+                "identity": node.element_id,
+                "labels": list(node.labels),
+                "properties": {k: serialize_neo4j_value(v) for k, v in dict(node).items()}
+            })
+                       
+        for rel in result.relationships:
+            relationships.append({
+                "identity": rel.element_id,
+                "start": rel.start_node.element_id,
+                "end": rel.end_node.element_id,
+                "type": rel.type,
+                "properties": {k: serialize_neo4j_value(v) for k, v in dict(rel).items()}
+            })
+        
+        return {
+            "nodes": nodes,
+            "relationships": relationships
+        }
+
 # Create a wrapper function for the component. This is an optional
 # best practice - we could simply expose the component function returned by
 # `declare_component` and call it done. The wrapper allows us to customize
@@ -67,11 +114,12 @@ def st_sigmagraph(graphData=None, height=600, key=None):
     # "default" is a special argument that specifies the initial return
     # value of the component before the user has interacted with it.
     
+
     component_value = _component_func(
-        graphData=graphData,
-        height=height,
-        key=key,
-        default=None
-    )
+            graphData=graphData,
+            height=height,
+            key=key,
+            default=None
+        )
     
     return component_value
