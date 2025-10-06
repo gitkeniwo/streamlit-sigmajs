@@ -4,6 +4,7 @@ README.md
 setup.py
 st_sigma/__init__.py
 st_sigma/example.py
+st_sigma/query.py
 st_sigma.egg-info/PKG-INFO
 st_sigma.egg-info/SOURCES.txt
 st_sigma.egg-info/dependency_links.txt

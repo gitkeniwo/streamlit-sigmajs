@@ -1,11 +1,14 @@
-/* ==================== 基础样式 ==================== */
+/* ==================== basics ==================== */
+/* use space grotesk font from google fonts */ 
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+
 .graph-container {
   width: 100%;
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background-color: #f4f1ea;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', sans-serif;
+  /* background-color: #f4f1ea; */
+  font-family: "Space Grotesk", -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', sans-serif;
 }
 
 .header {
@@ -401,7 +404,7 @@
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
 }
 
-/* ==================== 关系属性面板特殊样式 ==================== */
+/* ==================== Rel Panel ==================== */
 .relationship-panel .properties-header {
   background: linear-gradient(135deg, #8B9D83 0%, #7D8B7F 100%);
   color: white;
@@ -420,14 +423,14 @@
   color: white;
 }
 
-/* ==================== 边标签样式 ==================== */
+/* ==================== Edge label ==================== */
 .sigma-edge-label {
   font-size: 10px;
   fill: #7a7167;
   pointer-events: none;
 }
 
-/* ==================== 无数据/属性提示 ==================== */
+/* ==================== No Props ==================== */
 .no-data-message {
   display: flex;
   flex-direction: column;
