@@ -24,7 +24,7 @@ const LegendPanel: React.FC<LegendPanelProps> = ({
   graphOrder, 
   graphSize 
 }) => {
-  const [visible, setVisible] = useState(true);
+  const [visible, setVisible] = useState(false);
 
   const toggleVisibility = () => {
     setVisible(prevVisible => !prevVisible);
@@ -38,6 +38,7 @@ const LegendPanel: React.FC<LegendPanelProps> = ({
           {visible ? '−' : '+'}
         </button>
       </div>
+
       {visible && (
         <>
           {/* 节点类型 - 紧凑版 */}
@@ -81,6 +82,7 @@ const LegendPanel: React.FC<LegendPanelProps> = ({
           </div>
         </>
       )}
+
     </div>
   );
 };

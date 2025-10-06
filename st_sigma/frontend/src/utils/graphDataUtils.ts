@@ -29,7 +29,7 @@ export const convertNeo4jToGraph = (
   graphData: Neo4jGraphData,
   labelColorMap: Map<string, string>
 ): Graph => {
-  const graph = new Graph();
+  const graph = new Graph({ multi: true });
 
   // Add nodes
   graphData.nodes.forEach(node => {

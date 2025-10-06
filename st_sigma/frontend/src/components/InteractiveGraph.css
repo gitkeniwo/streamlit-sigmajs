@@ -54,7 +54,9 @@
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.04);
   z-index: 1000;
   border: 1px solid rgba(232, 227, 216, 0.6);
-  max-height: 500px;
+  --legend-bottom-offset: 40px;     /* matches bottom: 40px */
+  --legend-top-margin: 24px;        /* extra top gap you want */
+   max-height: calc(100% - var(--legend-bottom-offset) - var(--legend-top-margin));
   overflow-y: auto;
 }
 

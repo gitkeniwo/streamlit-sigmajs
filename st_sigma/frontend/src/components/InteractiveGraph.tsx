@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useMemo } from 'react';
 import Graph from 'graphology';
 import Sigma from 'sigma';
 import forceAtlas2 from 'graphology-layout-forceatlas2';
-import { circular } from 'graphology-layout';
+import { circular, random } from 'graphology-layout';
 import { Streamlit, withStreamlitConnection } from 'streamlit-component-lib';
 
 import LegendPanel, { NodeType, RelationshipType } from './LegendPanel';
@@ -98,14 +98,17 @@ const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
     const graph = convertNeo4jToGraph(graphData, labelColorMap);
     graphRef.current = graph;
 
+
     // apply ForceAtlas2 layout for better initial positioning
-    forceAtlas2.assign(graph, {
-      iterations: 100,
-      settings: {
-        gravity: 1,
-        scalingRatio: 10,
-      }
-    });
+    // forceAtlas2.assign(graph, {
+    //   iterations: 100,
+    //   settings: {
+    //     gravity: 1,
+    //     scalingRatio: 10,
+    //   }
+    // });
+    random.assign(graph);
+
 
     // create circular layout to spread out nodes
     const sigma = new Sigma(graph, containerRef.current, {
