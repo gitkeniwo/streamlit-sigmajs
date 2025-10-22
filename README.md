@@ -2,7 +2,13 @@
 
 Streamlit component that allows you visualize interactive graphs using sigma.js.
 
-## Installation instructions
+## Roadmap
+- [x] Basic graph visualization
+- [x] Node and edge styling
+- [x] Event handling (click, hover)
+- [ ] Graph layouts
+
+## Local Installation
 
 Activate your uv venv, then run:
 
@@ -31,7 +37,32 @@ uv pip install streamlit neo4j
 streamlit run example_app.py
 ```
 
-## Usage instructions
+## Install from PyPI
+
+```sh
+uv add streamlit-sigmajs
+```
+
+## Build and publish to PyPI
+
+1. Update version in `pyproject.toml`
+2. Build the package:
+```sh
+uv sync
+rm -rf dist
+uv build
+```
+3. Publish the package:
+```sh
+export UV_PUBLISHER_TOKEN="your_token_here"
+uv publish dist/*
+```
+
+## Usage 
+
+The graph visualizer takes a customized graph dictionary in its `graphData` argument.
+You can convert a Neo4j graph result to the required dictionary using the `neo4jgraph_to_sigma` utility function.
+The `neo4jgraph_to_sigma` function takes a `neo4j.Graph` object as input, usually the results you get from `driver.execute_query(..., result_transformer_=neo4j.Result.graph)`.
 
 ```python
 import streamlit as st

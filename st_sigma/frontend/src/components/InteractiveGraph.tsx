@@ -100,14 +100,14 @@ const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
 
 
     // apply ForceAtlas2 layout for better initial positioning
-    // forceAtlas2.assign(graph, {
-    //   iterations: 100,
-    //   settings: {
-    //     gravity: 1,
-    //     scalingRatio: 10,
-    //   }
-    // });
-    random.assign(graph);
+    forceAtlas2.assign(graph, {
+      iterations: 100,
+      settings: {
+        gravity: 1,
+        scalingRatio: 10,
+      }
+    });
+    // random.assign(graph);
 
 
     // create circular layout to spread out nodes
@@ -117,8 +117,8 @@ const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
       labelColor: { color: '#4a4137' },
       labelSize: 14,
       labelWeight: '500',
-      renderEdgeLabels: true, // 启用边标签
-      enableEdgeEvents: true, // 启用边事件
+      renderEdgeLabels: true, 
+      enableEdgeEvents: true, 
     });
     sigmaRef.current = sigma;
 
