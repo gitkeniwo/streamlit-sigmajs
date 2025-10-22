@@ -2,6 +2,11 @@
 
 Streamlit component that allows you visualize interactive graphs using sigma.js.
 
+## What it looks like in Streamlit Apps
+
+<img width="890" height="874" alt="image" src="https://github.com/user-attachments/assets/b7dd0471-3280-461d-8306-93c85ae287ca" />
+
+
 ## Roadmap
 - [x] Basic graph visualization
 - [x] Node and edge styling
