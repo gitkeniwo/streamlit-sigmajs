@@ -1,17 +1,20 @@
 # st-sigma
 
+[![GLWT](https://img.shields.io/badge/License-GLWT-pink)](https://github.com/gitkeniwo/streamlit-sigmajs/blob/main/LICENSE)
+[![pypi](https://img.shields.io/pypi/v/streamlit-sigmajs)](https://pypi.org/project/streamlit-sigmajs)
+
 Streamlit component that allows you visualize interactive graphs using sigma.js.
 
-## What it looks like in Streamlit Apps
+## Demo
 
-<img width="890" height="874" alt="image" src="https://github.com/user-attachments/assets/b7dd0471-3280-461d-8306-93c85ae287ca" />
-
+<img width="1448" height="988" alt="image" src="https://github.com/user-attachments/assets/7b82119a-70a5-4037-94e2-e461bfa8a923" />
 
 ## Roadmap
 - [x] Basic graph visualization
 - [x] Node and edge styling
 - [x] Event handling (click, hover)
 - [ ] Graph layouts
+- [ ] Theming
 
 ## Local Installation
 
