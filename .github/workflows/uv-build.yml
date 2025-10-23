@@ -25,3 +25,4 @@ jobs:
         with:
           name: dist
           path: dist/ # or path/to/artifact
+          retention-days: 7
