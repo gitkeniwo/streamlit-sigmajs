@@ -86,40 +86,51 @@ def neo4jgraph_to_sigma(result):
 # `declare_component` and call it done. The wrapper allows us to customize
 # our component's API: we can pre-process its input args, post-process its
 # output value, and add a docstring for users.
-def st_sigmagraph(graphData=None, height=600, key=None):
-    """Create a new instance of "my_component".
+def st_sigmagraph(graphData=None, height=600, layout="force", layout_settings=None, key=None):
+    """Create a new instance of "st_sigmagraph".
 
     Parameters
     ----------
-    name: str
-        The name of the thing we're saying hello to. The component will display
-        the text "Hello, {name}!"
+    graphData: dict
+        The graph data in the format returned by neo4jgraph_to_sigma.
+    height: int
+        Height of the component in pixels.
+    layout: str
+        Layout algorithm to use. Options: "force" (default), "circular", "random".
+    layout_settings: dict, optional
+        Configuration dictionary for the chosen layout.
+        For 'force', options include:
+            - gravity (default: 0.5): How strong nodes are pulled to center
+            - scalingRatio (default: 20): How much the graph expands
+            - linLogMode (default: True): Cluster separation mode
+            - iterations (default: 100): Number of initial layout iterations
     key: str or None
-        An optional key that uniquely identifies this component. If this is
-        None, and the component's arguments are changed, the component will
-        be re-mounted in the Streamlit frontend and lose its current state.
-
-    Returns
-    -------
-    int
-        The number of times the component's "Click Me" button has been clicked.
-        (This is the value passed to `Streamlit.setComponentValue` on the
-        frontend.)
-
+        An optional key that uniquely identifies this component.
     """
-    # Call through to our private component function. Arguments we pass here
-    # will be sent to the frontend, where they'll be available in an "args"
-    # dictionary.
-    #
-    # "default" is a special argument that specifies the initial return
-    # value of the component before the user has interacted with it.
-    
+
+    # Default settings for "force" layout to address clustering issues
+    default_force_settings = {
+        "gravity": 0.5,           # Reduced from 1 to let it spread out
+        "scalingRatio": 20,       # Increased from 10 to add space
+        "linLogMode": True,       # Helps separate clusters
+        "strongGravityMode": False,
+        "iterations": 150         # A bit more time to settle
+    }
+
+    if layout == "force":
+        if layout_settings is None:
+            layout_settings = default_force_settings
+        else:
+            # Merge user settings with defaults
+            layout_settings = {**default_force_settings, **layout_settings}
 
     component_value = _component_func(
             graphData=graphData,
             height=height,
+            layout=layout,
+            layoutSettings=layout_settings,
             key=key,
             default=None
         )
-    
+
     return component_value

@@ -4,31 +4,33 @@ Streamlit component that allows you visualize interactive graphs using sigma.js.
 
 ## Installation instructions
 
-Activate your uv venv, then run:
+### Development Mode (Recommended)
+
+To install the package in editable mode so that local changes are reflected immediately:
+
+1. Activate your uv venv
+2. Run the following command from the root directory:
 
 ```sh
-pip install -e .
+uv pip install -e ./streamlit-sigmajs
 ```
 
-To build your frontend code, run the following commands from the `st_sigma/frontend` directory:
+### Build Frontend
+
+To build your frontend code, run the following commands from the `streamlit-sigmajs/st_sigma/frontend` directory:
 
 ```sh
 npm install
 npm run build
 ```
 
-To run in development mode with hot-reloading, in the `st_sigma/frontend` directory, run:
+### Run Example
 
-```sh
-npm install
-npm run start
-```
-
-To start your streamlit app, in the `st_sigma` directory, run:
+To start your streamlit app, in the `streamlit-sigmajs/st_sigma` directory, run:
 
 ```sh
 uv pip install streamlit neo4j
-streamlit run example_app.py
+streamlit run example.py
 ```
 
 ## Usage instructions
@@ -37,49 +39,49 @@ streamlit run example_app.py
 import streamlit as st
 from st_sigma import st_sigmagraph, neo4jgraph_to_sigma
 
-import neo4j
-from neo4j import GraphDatabase
+# ... (Neo4j connection setup) ...
 
-NEO4J_URI = "bolt://localhost:7677"
-NEO4J_USER = "neo4j"
-NEO4J_PASSWORD = "your_password"
-
-def query_neo4j_graph(query):
-    
-    with GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD)) as driver:
-        result = driver.execute_query( query, result_transformer_ = neo4j.Result.graph )
-        
-        return result
-
-
-query = st.text_area(
-    "Enter Cypher Query",
-    value="MATCH (n)-[r]->(m) RETURN n, r, m LIMIT 4",
-    height=100
+# Basic Usage
+st_sigmagraph(
+    graphData=result,
+    height=500,  # Required by Streamlit to reserve space
+    layout="force",  # Options: "force" (default), "circular", "random"
+    layout_settings={
+        "gravity": 0.5,
+        "iterations": 150
+    },
+    key="neo4j_graph"
 )
-
-st.subheader("Component with variable args")
-
-
-height = st.slider("Graph Height", min_value=200, max_value=800, value=600, step=50)
-
-
-if st.button("Visualize Graph"):
-    try:
-        with st.spinner("Querying Neo4j..."):
-            result = query_neo4j_graph(query)
-            result = neo4jgraph_to_sigma(result)
-            
-            if not result["nodes"]:
-                st.warning("No nodes found in the query result.")
-            else:
-                st.success(f"Found {len(result['nodes'])} nodes and {len(result['relationships'])} relationships")
-                
-                st_sigmagraph(
-                    graphData=result,
-                    height=height,
-                    key="neo4j_graph"
-                )
-    except Exception as e:
-        st.error(f"Error: {str(e)}")
 ```
+
+The component now supports dynamic resizing within its container (height: 100vh). You must still provide a `height` argument to `st_sigmagraph` to reserve the vertical space in the Streamlit layout.
+
+## Publishing to PyPI
+
+To build and publish the package to PyPI using `uv`:
+
+1. **Build Frontend First** (Critical):
+   Ensure the frontend is compiled before packaging, as `uv build` does not do this automatically.
+   ```sh
+   cd st_sigma/frontend
+   npm install
+   npm run build
+   cd ../..
+   ```
+
+2. **Clean old builds** (optional but recommended):
+   ```sh
+   rm -rf dist/
+   ```
+
+3. **Build the package**:
+   ```sh
+   uv build
+   ```
+
+4. **Publish to PyPI**:
+   ```sh
+   uv publish
+   ```
+   *Note: Ensure you have your PyPI credentials configured or set via environment variables (`UV_PUBLISH_TOKEN`).*
+

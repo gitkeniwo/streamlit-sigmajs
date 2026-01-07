@@ -1,14 +1,42 @@
-/* ==================== basics ==================== */
-/* use space grotesk font from google fonts */ 
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+/* ==================== CSS Custom Properties ==================== */
+:root {
+  /* Colors - easily maintainable */
+  --color-bg-primary: #fdfcfb;
+  --color-bg-secondary: rgba(244, 241, 234, 0.5);
+  --color-bg-hover: rgba(244, 241, 234, 0.8);
+  --color-text-primary: #1a1715;
+  --color-text-secondary: #6b5d4f;
+  --color-text-muted: #4a4137;
+  --color-border: #e8e3d8;
+  --color-border-light: rgba(232, 227, 216, 0.6);
 
+  /* Node/Edge colors */
+  --color-node-default: #9b8579;
+  --color-edge-default: #d4c4b0;
+  --color-edge-highlight: #cc8b65;
+
+  /* Panel styling */
+  --panel-radius: 12px;
+  --panel-radius-lg: 16px;
+  --panel-shadow: 0 4px 16px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.04);
+  --panel-shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.08),
+    0 0 0 1px rgba(232, 227, 216, 0.8);
+
+  /* Typography */
+  --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto",
+    "Helvetica", "Arial", sans-serif;
+}
+
+/* ==================== basics ==================== */
 .graph-container {
   width: 100%;
-  height: 100vh;
+  height: 100vh; /* Fill the iframe viewport */
   display: flex;
   flex-direction: column;
-  /* background-color: #f4f1ea; */
-  font-family: "Space Grotesk", -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', sans-serif;
+  font-family: var(--font-family);
+  position: relative;
+  overflow: hidden; /* Prevent double scrollbars */
+  background-color: var(--color-bg-primary);
 }
 
 .header {
@@ -38,41 +66,39 @@
   flex: 1;
   overflow: hidden;
   position: relative;
-  padding: 24px;
+  height: 100%;
 }
 
-/* ==================== Legend Panel - 紧凑版 ==================== */
+/* ==================== Legend Panel ==================== */
 .legend-panel {
   position: absolute;
-  bottom: 40px;
-  left: 40px;
+  bottom: 16px;
+  left: 16px;
   background-color: rgba(253, 252, 251, 0.96);
   backdrop-filter: blur(12px);
-  border-radius: 12px;
+  border-radius: var(--panel-radius);
   padding: 10px 12px;
   width: 180px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--panel-shadow);
   z-index: 1000;
-  border: 1px solid rgba(232, 227, 216, 0.6);
-  --legend-bottom-offset: 40px;     /* matches bottom: 40px */
-  --legend-top-margin: 24px;        /* extra top gap you want */
-   max-height: calc(100% - var(--legend-bottom-offset) - var(--legend-top-margin));
+  border: 1px solid var(--color-border-light);
+  max-height: calc(100% - 32px);
   overflow-y: auto;
 }
 
-/* Legend Header - 紧凑版 */
+/* Legend Header */
 .legend-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 8px;
   padding-bottom: 6px;
-  border-bottom: 1px solid #e8e3d8;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .legend-panel h3 {
   margin: 0;
-  color: #1a1715;
+  color: var(--color-text-primary);
   font-size: 12px;
   font-weight: 600;
   letter-spacing: -0.01em;
@@ -81,7 +107,7 @@
 .legend-toggle-button {
   background: none;
   border: none;
-  color: #6b5d4f;
+  color: var(--color-text-secondary);
   cursor: pointer;
   padding: 2px 6px;
   font-size: 16px;
@@ -172,7 +198,7 @@
 
 .relationship-icon-small {
   font-size: 11px;
-  color: #CC8B65;
+  color: #cc8b65;
   font-weight: bold;
   width: 12px;
   text-align: center;
@@ -228,7 +254,7 @@
 }
 
 .stat-divider {
-  color: #e8e3d8;
+  color: var(--color-border);
   font-size: 12px;
   font-weight: 300;
 }
@@ -236,27 +262,28 @@
 /* ==================== Sigma Container ==================== */
 .sigma-container {
   flex: 1;
-  background-color: #fdfcfb;
-  border-radius: 16px;
+  background-color: var(--color-bg-primary);
+  border-radius: var(--panel-radius-lg);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(232, 227, 216, 0.8);
   position: relative;
+  overflow: hidden;
 }
 
 /* ==================== Properties Panel ==================== */
 .properties-panel {
   position: absolute;
-  top: 40px;
-  right: 40px;
-  bottom: 40px;
+  top: 16px;
+  right: 16px;
+  max-height: calc(100% - 32px);
   background-color: rgba(253, 252, 251, 0.98);
   backdrop-filter: blur(12px);
-  border-radius: 16px;
-  width: 340px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(232, 227, 216, 0.8);
+  border-radius: var(--panel-radius-lg);
+  width: 320px;
+  box-shadow: var(--panel-shadow-lg);
   overflow-y: auto;
   animation: slideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   z-index: 1000;
-  border: 1px solid rgba(232, 227, 216, 0.6);
+  border: 1px solid var(--color-border-light);
 }
 
 @keyframes slideIn {
@@ -408,7 +435,7 @@
 
 /* ==================== Rel Panel ==================== */
 .relationship-panel .properties-header {
-  background: linear-gradient(135deg, #8B9D83 0%, #7D8B7F 100%);
+  background: linear-gradient(135deg, #8b9d83 0%, #7d8b7f 100%);
   color: white;
 }
 

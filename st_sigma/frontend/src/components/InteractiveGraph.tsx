@@ -98,17 +98,29 @@ const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
     const graph = convertNeo4jToGraph(graphData, labelColorMap);
     graphRef.current = graph;
 
+    // Apply layout based on passed arguments
+    const layout = args.layout || "force";
+    const layoutSettings = args.layoutSettings || {};
 
-    // apply ForceAtlas2 layout for better initial positioning
-    // forceAtlas2.assign(graph, {
-    //   iterations: 100,
-    //   settings: {
-    //     gravity: 1,
-    //     scalingRatio: 10,
-    //   }
-    // });
-    random.assign(graph);
+    console.log(`Applying layout: ${layout}`, layoutSettings);
 
+    if (layout === "circular") {
+      circular.assign(graph);
+    } else if (layout === "random") {
+      random.assign(graph);
+    } else {
+      // Default to ForceAtlas2
+      forceAtlas2.assign(graph, {
+        iterations: layoutSettings.iterations || 100,
+        settings: {
+          gravity: layoutSettings.gravity ?? 0.5,           // Default reduced gravity
+          scalingRatio: layoutSettings.scalingRatio ?? 20,  // Default increased scaling
+          linLogMode: layoutSettings.linLogMode ?? true,    // Good for clusters
+          strongGravityMode: layoutSettings.strongGravityMode ?? false,
+          ...layoutSettings // Overlay any other user settings
+        }
+      });
+    }
 
     // create circular layout to spread out nodes
     const sigma = new Sigma(graph, containerRef.current, {
@@ -117,8 +129,8 @@ const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
       labelColor: { color: '#4a4137' },
       labelSize: 14,
       labelWeight: '500',
-      renderEdgeLabels: true, // 启用边标签
-      enableEdgeEvents: true, // 启用边事件
+      renderEdgeLabels: true, 
+      enableEdgeEvents: true, 
     });
     sigmaRef.current = sigma;
 
@@ -357,7 +369,7 @@ const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
 
     // notify Streamlit that the component is ready
     Streamlit.setComponentReady();
-    Streamlit.setFrameHeight(componentHeight + 200);
+    Streamlit.setFrameHeight(componentHeight);
     
     // cleanup on unmount
     return () => {
@@ -373,7 +385,7 @@ const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
   // handle height changes
   useEffect(() => {
     if (initializedRef.current) {
-      Streamlit.setFrameHeight(componentHeight + 100);
+      Streamlit.setFrameHeight(componentHeight);
     }
   }, [componentHeight]);
 
@@ -393,13 +405,13 @@ const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
     <div className="graph-container">
 
       <div className="content-wrapper">
-        <div 
-          ref={containerRef} 
-          className="sigma-container" 
-          style={{ width: '100%', height: `${componentHeight}px` }} 
+        <div
+          ref={containerRef}
+          className="sigma-container"
+          style={{ width: '100%', height: '100vh' }}
         />
 
-        <LegendPanel 
+        <LegendPanel
           nodeTypes={nodeTypes}
           relationshipTypes={relationshipTypes}
           graphOrder={graphRef.current?.order || 0}

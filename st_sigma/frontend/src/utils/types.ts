@@ -21,6 +21,8 @@ export interface Neo4jGraphData {
 export interface StreamlitComponentArgs {
   graphData?: Neo4jGraphData;
   height?: number;
+  layout?: "force" | "circular" | "random";
+  layoutSettings?: Record<string, any>;
 }
 
 export interface NodeInfo {
