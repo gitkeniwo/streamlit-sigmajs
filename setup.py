@@ -6,17 +6,21 @@ this_directory = Path(__file__).parent
 long_description = (this_directory / "README.md").read_text()
 
 setuptools.setup(
-    name="st-sigma",
-    version="0.0.1",
-    author="John Smith",
-    author_email="john@example.com",
-    description="Streamlit component that allows you to do X",
+    name="streamlit-sigmajs",
+    version="0.1.0",
+    author="gitkeniwo",
+    author_email="xw@gitkeniwo.tech",
+    description="A Streamlit component for rendering interactive graph visualizations using Sigma.js.",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="",
     packages=setuptools.find_packages(),
     include_package_data=True,
-    classifiers=[],
+    classifiers=[
+        "Programming Language :: Python :: 3",
+        "License :: OSI Approved :: MIT License",
+        "Operating System :: OS Independent",
+    ],
     python_requires=">=3.7",
     install_requires=[
         # By definition, a Custom Component depends on Streamlit.

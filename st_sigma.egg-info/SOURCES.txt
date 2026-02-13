@@ -11,5 +11,5 @@ st_sigma.egg-info/dependency_links.txt
 st_sigma.egg-info/requires.txt
 st_sigma.egg-info/top_level.txt
 st_sigma/frontend/build/index.html
-st_sigma/frontend/build/assets/index-BxEfbVZ1.js
-st_sigma/frontend/build/assets/index-DMs3Udj3.css
+st_sigma/frontend/build/assets/index-BU4iKkIJ.css
+st_sigma/frontend/build/assets/index-p3a-8gZJ.js

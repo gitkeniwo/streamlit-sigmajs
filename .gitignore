@@ -1,5 +1,23 @@
 # node modules
 node_modules/
+st_sigma/frontend/node_modules/
 
 # egg info
 *.egg-info/
+dist/
+build/
+
+# python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# frontend build artifacts
+st_sigma/frontend/build/
+st_sigma/frontend/dist/
+
+# system
+.DS_Store
+.env
+.venv/
+venv/

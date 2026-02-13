@@ -124,6 +124,7 @@ const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
 
     // create circular layout to spread out nodes
     const sigma = new Sigma(graph, containerRef.current, {
+      allowInvalidContainer: true,  // Allow initialization in hidden tabs
       defaultEdgeColor: '#d4c4b0',
       defaultNodeColor: '#9B8579',
       labelColor: { color: '#4a4137' },

@@ -33,14 +33,15 @@ else:
     # build directory:
     parent_dir = os.path.dirname(os.path.abspath(__file__))
     build_dir = os.path.join(parent_dir, "frontend/build")
-    _component_func = components.declare_component("", path=build_dir)
+    _component_func = components.declare_component("st_sigmagraph", path=build_dir)
 
 
 def serialize_neo4j_value(val):
     import math
     import numpy as np
+
     # Neo4j Date/Time types
-    if hasattr(val, 'isoformat'):
+    if hasattr(val, "isoformat"):
         return val.isoformat()
     if isinstance(val, (float, np.floating)) and (math.isnan(val) or math.isinf(val)):
         return None
@@ -53,40 +54,46 @@ def serialize_neo4j_value(val):
     return val
 
 
+def neo4jgraph_to_sigma(result):
+    # extract nodes and relationships
+    nodes = []
+    relationships = []
 
-def neo4jgraph_to_sigma(result):      
-        # extract nodes and relationships
-        nodes = []
-        relationships = []
-                
-        
-        for node in result.nodes:
-            nodes.append({
+    for node in result.nodes:
+        nodes.append(
+            {
                 "identity": node.element_id,
                 "labels": list(node.labels),
-                "properties": {k: serialize_neo4j_value(v) for k, v in dict(node).items()}
-            })
-                       
-        for rel in result.relationships:
-            relationships.append({
+                "properties": {
+                    k: serialize_neo4j_value(v) for k, v in dict(node).items()
+                },
+            }
+        )
+
+    for rel in result.relationships:
+        relationships.append(
+            {
                 "identity": rel.element_id,
                 "start": rel.start_node.element_id,
                 "end": rel.end_node.element_id,
                 "type": rel.type,
-                "properties": {k: serialize_neo4j_value(v) for k, v in dict(rel).items()}
-            })
-        
-        return {
-            "nodes": nodes,
-            "relationships": relationships
-        }
+                "properties": {
+                    k: serialize_neo4j_value(v) for k, v in dict(rel).items()
+                },
+            }
+        )
+
+    return {"nodes": nodes, "relationships": relationships}
+
 
 # Create a wrapper function for the component. This is an optional
 # best practice - we could simply expose the component function returned by
 # `declare_component` and call it done. The wrapper allows us to customize
 # our component's API: we can pre-process its input args, post-process its
 # output value, and add a docstring for users.
-def st_sigmagraph(graphData=None, height=600, layout="force", layout_settings=None, key=None):
+def st_sigmagraph(
+    graphData=None, height=600, layout="force", layout_settings=None, key=None
+):
     """Create a new instance of "st_sigmagraph".
 
     Parameters
@@ -110,11 +117,11 @@ def st_sigmagraph(graphData=None, height=600, layout="force", layout_settings=No
 
     # Default settings for "force" layout to address clustering issues
     default_force_settings = {
-        "gravity": 0.5,           # Reduced from 1 to let it spread out
-        "scalingRatio": 20,       # Increased from 10 to add space
-        "linLogMode": True,       # Helps separate clusters
+        "gravity": 0.5,  # Reduced from 1 to let it spread out
+        "scalingRatio": 20,  # Increased from 10 to add space
+        "linLogMode": True,  # Helps separate clusters
         "strongGravityMode": False,
-        "iterations": 150         # A bit more time to settle
+        "iterations": 150,  # A bit more time to settle
     }
 
     if layout == "force":
@@ -125,12 +132,12 @@ def st_sigmagraph(graphData=None, height=600, layout="force", layout_settings=No
             layout_settings = {**default_force_settings, **layout_settings}
 
     component_value = _component_func(
-            graphData=graphData,
-            height=height,
-            layout=layout,
-            layoutSettings=layout_settings,
-            key=key,
-            default=None
-        )
+        graphData=graphData,
+        height=height,
+        layout=layout,
+        layoutSettings=layout_settings,
+        key=key,
+        default=None,
+    )
 
     return component_value
