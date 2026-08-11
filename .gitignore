@@ -1,7 +1,17 @@
-# node modules
-node_modules/
-
-# egg info
+# Python
+__pycache__/
+*.py[cod]
 *.egg-info/
-
+.venv/
+build/
 dist/
+
+# Frontend
+node_modules/
+st_sigma/frontend/build/
+
+# Local configuration and operating-system files
+.env
+.env.*
+!.env.example
+.DS_Store

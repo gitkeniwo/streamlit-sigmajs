@@ -1,9 +1,9 @@
-# st-sigma
+# streamlit-sigmajs
 
 [![GLWT](https://img.shields.io/badge/License-GLWT-pink)](https://github.com/gitkeniwo/streamlit-sigmajs/blob/main/LICENSE)
 [![pypi](https://img.shields.io/pypi/v/streamlit-sigmajs)](https://pypi.org/project/streamlit-sigmajs)
 
-Streamlit component that allows you visualize interactive graphs using sigma.js.
+A Streamlit component for interactive property graph visualization, powered by Sigma.js.
 
 ## Demo
 
@@ -12,37 +12,37 @@ Streamlit component that allows you visualize interactive graphs using sigma.js.
 ## Roadmap
 - [x] Basic graph visualization
 - [x] Node and edge styling
-- [x] Event handling (click, hover)
+- [x] In-component node and edge selection
+- [ ] Python interaction callbacks
 - [ ] Graph layouts
 - [ ] Theming
 
 ## Local Installation
 
-Activate your uv venv, then run:
+Install the Python package and development dependencies:
 
 ```sh
-pip install -e .
+uv sync --extra dev
 ```
 
 To build your frontend code, run the following commands from the `st_sigma/frontend` directory:
 
 ```sh
-npm install
+npm ci
 npm run build
 ```
 
 To run in development mode with hot-reloading, in the `st_sigma/frontend` directory, run:
 
 ```sh
-npm install
+npm ci
 npm run start
 ```
 
-To start your streamlit app, in the `st_sigma` directory, run:
+To start the bundled example app, run:
 
 ```sh
-uv pip install streamlit neo4j
-streamlit run example_app.py
+uv run --with neo4j streamlit run st_sigma/example.py
 ```
 
 ## Install from PyPI
@@ -53,17 +53,19 @@ uv add streamlit-sigmajs
 
 ## Build and publish to PyPI
 
-1. Update version in `pyproject.toml`
-2. Build the package:
+1. Update the version in `pyproject.toml`.
+2. Build the frontend and Python distributions:
 ```sh
-uv sync
-rm -rf dist
+cd st_sigma/frontend
+npm ci
+npm run build
+cd ../..
 uv build
 ```
-3. Publish the package:
+3. Validate and publish the distributions:
 ```sh
-export UV_PUBLISHER_TOKEN="your_token_here"
-uv publish dist/*
+uvx twine check dist/*
+uv publish
 ```
 
 ## Usage 

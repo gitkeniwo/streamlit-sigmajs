@@ -1,25 +1,36 @@
 [project]
 name = "streamlit-sigmajs"
-version = "0.1.1"
-description = "Streamlit component for sigma.js graph visualization"
+version = "0.1.2"
+description = "Interactive property graph visualization for Streamlit, powered by Sigma.js"
 readme = "README.md"
 requires-python = ">=3.10"
+authors = [
+    { name = "gitkeniwo" },
+]
+license-files = ["LICENSE"]
 dependencies = [
     "streamlit>=1.50.0",
 ]
 
+[project.optional-dependencies]
+dev = [
+    "build>=1.2",
+    "pytest>=8.0",
+    "twine>=5.0",
+]
+
 [project.urls]
-Homepage = "https://pypi.org/project/streamlit-sigmajs/"
+Homepage = "https://github.com/gitkeniwo/streamlit-sigmajs"
 Repository = "https://github.com/gitkeniwo/streamlit-sigmajs"
+Issues = "https://github.com/gitkeniwo/streamlit-sigmajs/issues"
 
 
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
+requires = ["setuptools>=77.0.3", "wheel"]
 build-backend = "setuptools.build_meta"
 
-[tool.setuptools]
-packages = ["st_sigma"]
-include-package-data = true
+[tool.setuptools.packages.find]
+include = ["st_sigma*"]
 
 [tool.setuptools.package-data]
-st_sigma = ["frontend/build/**"]
+st_sigma = ["frontend/build/*", "frontend/build/**/*"]
