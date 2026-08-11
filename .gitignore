@@ -15,3 +15,6 @@ st_sigma/frontend/build/
 .env.*
 !.env.example
 .DS_Store
+
+# Downloaded or materialized example datasets
+examples/data/

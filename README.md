@@ -39,11 +39,15 @@ npm ci
 npm run start
 ```
 
-To start the bundled example app, run:
+To start the repository example app, run:
 
 ```sh
-uv run --with neo4j streamlit run st_sigma/example.py
+uv run --extra examples streamlit run examples/app.py
 ```
+
+The tracked gallery includes NetworkX, DataFrame, and synthetic property-graph
+examples. Materialized and third-party datasets are kept in the ignored
+`examples/data/` cache; see [`examples/README.md`](examples/README.md).
 
 ## Install from PyPI
 
