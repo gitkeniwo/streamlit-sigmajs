@@ -1,9 +1,4 @@
-"""Small, public graph examples for the Streamlit gallery.
-
-The conversion helpers in this module deliberately live outside the package.
-They demonstrate the intended v0.2 adapters without making them public API
-before that API has been designed and tested.
-"""
+"""Small, public graph examples for the Streamlit gallery."""
 
 from __future__ import annotations
 
@@ -13,100 +8,17 @@ from typing import Any
 import networkx as nx
 import pandas as pd
 
-SigmaGraph = dict[str, list[dict[str, Any]]]
-
-
-def networkx_to_sigma(
-    graph: nx.Graph,
-    *,
-    node_label: Callable[[Any, dict[str, Any]], str] | None = None,
-    node_type: Callable[[Any, dict[str, Any]], str] | None = None,
-) -> SigmaGraph:
-    """Convert a NetworkX graph to the component's current wire format."""
-    nodes: list[dict[str, Any]] = []
-    relationships: list[dict[str, Any]] = []
-
-    for node_id, attributes in graph.nodes(data=True):
-        properties = dict(attributes)
-        properties.setdefault(
-            "name",
-            node_label(node_id, properties) if node_label else str(node_id),
-        )
-        properties.setdefault("size", 8 + min(graph.degree(node_id), 12))
-        label = node_type(node_id, properties) if node_type else "Node"
-        nodes.append(
-            {
-                "identity": str(node_id),
-                "labels": [label],
-                "properties": properties,
-            }
-        )
-
-    for index, (source, target, attributes) in enumerate(graph.edges(data=True)):
-        properties = dict(attributes)
-        relationships.append(
-            {
-                "identity": f"edge-{index}",
-                "start": str(source),
-                "end": str(target),
-                "type": str(properties.pop("type", "CONNECTED_TO")),
-                "properties": properties,
-            }
-        )
-
-    return {"nodes": nodes, "relationships": relationships}
-
-
-def dataframes_to_sigma(
-    nodes: pd.DataFrame,
-    relationships: pd.DataFrame,
-) -> SigmaGraph:
-    """Convert two property tables to the current graph wire format."""
-    required_node_columns = {"id", "label", "name"}
-    required_edge_columns = {"id", "source", "target", "type"}
-    if missing := required_node_columns - set(nodes.columns):
-        raise ValueError(f"nodes DataFrame is missing columns: {sorted(missing)}")
-    if missing := required_edge_columns - set(relationships.columns):
-        raise ValueError(
-            f"relationships DataFrame is missing columns: {sorted(missing)}"
-        )
-
-    sigma_nodes = []
-    for record in nodes.to_dict(orient="records"):
-        sigma_nodes.append(
-            {
-                "identity": str(record.pop("id")),
-                "labels": [str(record.pop("label"))],
-                "properties": record,
-            }
-        )
-
-    sigma_relationships = []
-    for record in relationships.to_dict(orient="records"):
-        sigma_relationships.append(
-            {
-                "identity": str(record.pop("id")),
-                "start": str(record.pop("source")),
-                "end": str(record.pop("target")),
-                "type": str(record.pop("type")),
-                "properties": record,
-            }
-        )
-
-    return {"nodes": sigma_nodes, "relationships": sigma_relationships}
-
-
-def karate_club() -> SigmaGraph:
+def karate_club() -> nx.Graph:
     graph = nx.karate_club_graph()
-    return networkx_to_sigma(
-        graph,
-        node_label=lambda node_id, data: f"Member {node_id}",
-        node_type=lambda _node_id, data: str(data["club"]),
-    )
+    for node_id, data in graph.nodes(data=True):
+        data["name"] = f"Member {node_id}"
+        data["label"] = str(data["club"])
+        data["size"] = 8 + min(graph.degree(node_id), 12)
+    return graph
 
 
-def davis_southern_women() -> SigmaGraph:
-    """Build the Davis graph through DataFrames to exercise tabular input."""
+def davis_southern_women() -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Return separate node and edge property tables."""
     graph = nx.davis_southern_women_graph()
     women = set(graph.graph["top"])
 
@@ -129,21 +41,18 @@ def davis_southern_women() -> SigmaGraph:
         }
         for index, (source, target) in enumerate(graph.edges)
     ]
-    return dataframes_to_sigma(
-        pd.DataFrame(node_records),
-        pd.DataFrame(edge_records),
-    )
+    return pd.DataFrame(node_records), pd.DataFrame(edge_records)
 
 
-def les_miserables() -> SigmaGraph:
+def les_miserables() -> nx.Graph:
     graph = nx.les_miserables_graph()
-    return networkx_to_sigma(
-        graph,
-        node_type=lambda _node_id, _data: "Character",
-    )
+    for node_id, data in graph.nodes(data=True):
+        data["name"] = str(node_id)
+        data["label"] = "Character"
+    return graph
 
 
-def supply_chain() -> SigmaGraph:
+def supply_chain() -> dict[str, list[dict[str, Any]]]:
     """An original, license-safe property graph with typed relationships."""
     node_specs = [
         ("mine-nl", "Supplier", "Limburg Silica", "Netherlands", 15),
@@ -159,7 +68,7 @@ def supply_chain() -> SigmaGraph:
     ]
     nodes = [
         {
-            "identity": node_id,
+            "id": node_id,
             "labels": [label],
             "properties": {
                 "name": name,
@@ -184,33 +93,37 @@ def supply_chain() -> SigmaGraph:
         ("s10", "warehouse-be", "customer-utility", "DELIVERS_TO", {"sla_days": 3}),
         ("s11", "mine-se", "port-rtm", "SHIPS_VIA", {"mode": "sea", "lead_days": 5}),
     ]
-    relationships = [
+    edges = [
         {
-            "identity": edge_id,
-            "start": source,
-            "end": target,
+            "id": edge_id,
+            "source": source,
+            "target": target,
             "type": edge_type,
             "properties": properties,
         }
         for edge_id, source, target, edge_type, properties in edge_specs
     ]
-    return {"nodes": nodes, "relationships": relationships}
+    return {"nodes": nodes, "edges": edges}
 
 
-EXAMPLES: dict[str, tuple[str, Callable[[], SigmaGraph]]] = {
+EXAMPLES: dict[str, tuple[str, str, Callable[[], Any]]] = {
     "Synthetic supply chain": (
+        "Property graph dict",
         "Original property graph with typed, directed relationships and properties.",
         supply_chain,
     ),
     "NetworkX — Karate Club": (
+        "NetworkX",
         "Community attributes from NetworkX's built-in Karate Club graph.",
         karate_club,
     ),
     "DataFrames — Davis Southern Women": (
+        "DataFrames",
         "A bipartite NetworkX graph converted through node and edge DataFrames.",
         davis_southern_women,
     ),
     "NetworkX — Les Misérables": (
+        "NetworkX",
         "A weighted character co-appearance graph for a denser layout.",
         les_miserables,
     ),

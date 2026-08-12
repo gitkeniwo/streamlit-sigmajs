@@ -1,9 +1,9 @@
 import Graph from 'graphology';
-import { Neo4jGraphData, Neo4jNode } from './types';
+import { PropertyGraphData } from './types';
 import { createLabelColorMap } from './colorUtils';
 
 
-export const extractUniqueLabels = (graphData: Neo4jGraphData): string[] => {
+export const extractUniqueLabels = (graphData: PropertyGraphData): string[] => {
   const labelsSet = new Set<string>();
   
   graphData.nodes.forEach(node => {
@@ -14,26 +14,26 @@ export const extractUniqueLabels = (graphData: Neo4jGraphData): string[] => {
 };
 
 
-export const extractUniqueRelationshipTypes = (graphData: Neo4jGraphData): string[] => {
+export const extractUniqueRelationshipTypes = (graphData: PropertyGraphData): string[] => {
   const typesSet = new Set<string>();
   
-  graphData.relationships.forEach(rel => {
+  graphData.edges.forEach(rel => {
     typesSet.add(rel.type);
   });
   
   return Array.from(typesSet).sort();
 };
 
-// Turn Neo4j graph data into a graphology Graph instance
-export const convertNeo4jToGraph = (
-  graphData: Neo4jGraphData,
+// Turn canonical property-graph data into a graphology Graph instance
+export const convertPropertyGraphToGraph = (
+  graphData: PropertyGraphData,
   labelColorMap: Map<string, string>
 ): Graph => {
   const graph = new Graph({ multi: true });
 
   // Add nodes
   graphData.nodes.forEach(node => {
-    const nodeId = String(node.identity);
+    const nodeId = node.id;
     const primaryLabel = node.labels[0] || 'Unknown';
     const color = labelColorMap.get(primaryLabel) || '#9B8579';
     
@@ -60,15 +60,18 @@ export const convertNeo4jToGraph = (
   });
 
   // Add edges
-  graphData.relationships.forEach(relationship => {
-    const sourceId = String(relationship.start);
-    const targetId = String(relationship.end);
+  graphData.edges.forEach(relationship => {
+    const sourceId = relationship.source;
+    const targetId = relationship.target;
     
     // Only add edge if both nodes exist
     if (graph.hasNode(sourceId) && graph.hasNode(targetId)) {
-      const edgeId = `${sourceId}-${targetId}-${relationship.identity}`;
+      const edgeId = relationship.id;
       
-      graph.addEdge(sourceId, targetId, {
+      const addEdge = relationship.directed
+        ? graph.addDirectedEdge.bind(graph)
+        : graph.addUndirectedEdge.bind(graph);
+      addEdge(sourceId, targetId, {
         id: edgeId,
         size: 2,
         color: '#d4c4b0',

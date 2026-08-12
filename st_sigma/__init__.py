@@ -3,6 +3,31 @@ from pathlib import Path
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
 
+from .adapters import (
+    from_dataframes,
+    from_mapping,
+    from_neo4j,
+    from_networkx,
+    normalize_graph,
+    serialize_value,
+)
+from .schema import PropertyGraph, PropertyGraphEdge, PropertyGraphNode
+
+__all__ = [
+    "PropertyGraph",
+    "PropertyGraphEdge",
+    "PropertyGraphNode",
+    "from_dataframes",
+    "from_mapping",
+    "from_neo4j",
+    "from_networkx",
+    "neo4jgraph_to_sigma",
+    "normalize_graph",
+    "serialize_neo4j_value",
+    "sigma_graph",
+    "st_sigmagraph",
+]
+
 
 def _register_component():
     """Register packaged assets, with an inline fallback for editable installs."""
@@ -35,55 +60,46 @@ _component_func = _register_component()
 
 
 def serialize_neo4j_value(val):
-    import math
-    import numpy as np
-
-    # Neo4j Date/Time types
-    if hasattr(val, "isoformat"):
-        return val.isoformat()
-    if isinstance(val, (float, np.floating)) and (math.isnan(val) or math.isinf(val)):
-        return None
-    if val is None or val is np.nan:
-        return None
-    if isinstance(val, (list, tuple)):
-        return [serialize_neo4j_value(v) for v in val]
-    if isinstance(val, dict):
-        return {k: serialize_neo4j_value(v) for k, v in val.items()}
-    return val
+    """Backward-compatible alias for :func:`serialize_value`."""
+    return serialize_value(val)
 
 
 def neo4jgraph_to_sigma(result):
-    """Convert a Neo4j graph result without requiring the Neo4j package."""
-    nodes = []
-    relationships = []
-
-    for node in result.nodes:
-        nodes.append(
+    """Convert Neo4j data to the legacy v0.1 dictionary shape."""
+    graph = from_neo4j(result)
+    return {
+        "nodes": [
             {
-                "identity": node.element_id,
-                "labels": list(node.labels),
-                "properties": {
-                    key: serialize_neo4j_value(value)
-                    for key, value in dict(node).items()
-                },
+                "identity": node["id"],
+                "labels": node["labels"],
+                "properties": node["properties"],
             }
-        )
-
-    for relationship in result.relationships:
-        relationships.append(
+            for node in graph["nodes"]
+        ],
+        "relationships": [
             {
-                "identity": relationship.element_id,
-                "start": relationship.start_node.element_id,
-                "end": relationship.end_node.element_id,
-                "type": relationship.type,
-                "properties": {
-                    key: serialize_neo4j_value(value)
-                    for key, value in dict(relationship).items()
-                },
+                "identity": edge["id"],
+                "start": edge["source"],
+                "end": edge["target"],
+                "type": edge["type"],
+                "properties": edge["properties"],
             }
-        )
+            for edge in graph["edges"]
+        ],
+    }
 
-    return {"nodes": nodes, "relationships": relationships}
+
+def sigma_graph(graph, *, edges=None, height=600, key=None):
+    """Render a supported graph value without a manual conversion step.
+
+    ``graph`` may be a canonical or legacy graph dictionary, a NetworkX graph,
+    a Neo4j ``Graph`` result, or a node DataFrame when ``edges`` is provided.
+    """
+    graph_data = normalize_graph(graph, edges=edges)
+    return _component_func(
+        key=key,
+        data={"graphData": graph_data, "height": height},
+    )
 
 def st_sigmagraph(graphData=None, height=600, key=None):
     """Render an interactive Sigma.js graph in a Streamlit app.
@@ -107,7 +123,9 @@ def st_sigmagraph(graphData=None, height=600, key=None):
         result as the public API evolves.
 
     """
-    return _component_func(
-        key=key,
-        data={"graphData": graphData, "height": height},
-    )
+    if graphData is None:
+        return _component_func(
+            key=key,
+            data={"graphData": None, "height": height},
+        )
+    return sigma_graph(graphData, height=height, key=key)

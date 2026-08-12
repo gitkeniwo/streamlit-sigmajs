@@ -8,17 +8,22 @@ EXAMPLES_DIR = Path(__file__).parents[1] / "examples"
 sys.path.insert(0, str(EXAMPLES_DIR))
 
 from example_graphs import EXAMPLES  # noqa: E402
+from st_sigma import normalize_graph  # noqa: E402
 
 
 def test_examples_use_valid_component_wire_format():
-    for _name, (_description, build_graph) in EXAMPLES.items():
-        graph = build_graph()
-        node_ids = {node["identity"] for node in graph["nodes"]}
+    for _name, (_input_format, _description, build_graph) in EXAMPLES.items():
+        input_data = build_graph()
+        graph = (
+            normalize_graph(input_data[0], edges=input_data[1])
+            if isinstance(input_data, tuple)
+            else normalize_graph(input_data)
+        )
+        node_ids = {node["id"] for node in graph["nodes"]}
 
         assert node_ids
         assert all(node["labels"] for node in graph["nodes"])
         assert all(
-            relationship["start"] in node_ids
-            and relationship["end"] in node_ids
-            for relationship in graph["relationships"]
+            edge["source"] in node_ids and edge["target"] in node_ids
+            for edge in graph["edges"]
         )

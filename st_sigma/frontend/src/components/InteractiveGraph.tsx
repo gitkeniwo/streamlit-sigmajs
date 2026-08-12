@@ -8,7 +8,7 @@ import PropertiesPanel, { NodeInfo } from './PropertiesPanel';
 import RelationshipPropertiesPanel, { EdgeInfo } from './RelationshipPropertiesPanel';
 import { StreamlitComponentArgs } from '../utils/types';
 import {
-  convertNeo4jToGraph,
+  convertPropertyGraphToGraph,
   extractUniqueLabels,
   extractUniqueRelationshipTypes,
 } from '../utils/graphDataUtils';
@@ -94,7 +94,7 @@ const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
     );
 
     const relTypeCount = new Map<string, number>();
-    graphData.relationships.forEach((relationship) => {
+    graphData.edges.forEach((relationship) => {
       relTypeCount.set(
         relationship.type,
         (relTypeCount.get(relationship.type) || 0) + 1,
@@ -107,7 +107,7 @@ const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
       })),
     );
 
-    const graph = convertNeo4jToGraph(graphData, labelColorMap);
+    const graph = convertPropertyGraphToGraph(graphData, labelColorMap);
     graphRef.current = graph;
 
     forceAtlas2.assign(graph, {
