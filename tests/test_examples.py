@@ -7,7 +7,7 @@ from pathlib import Path
 EXAMPLES_DIR = Path(__file__).parents[1] / "examples"
 sys.path.insert(0, str(EXAMPLES_DIR))
 
-from example_graphs import EXAMPLES  # noqa: E402
+from example_graphs import EXAMPLES, supply_chain  # noqa: E402
 from st_sigma import normalize_graph  # noqa: E402
 
 
@@ -31,3 +31,13 @@ def test_examples_use_valid_component_wire_format():
         )
 
     assert {"Property graph dict", "NetworkX", "DataFrames", "Neo4j Graph"} <= input_formats
+
+
+def test_supply_chain_supports_the_prepositioned_layout():
+    graph = supply_chain()
+
+    assert all(
+        isinstance(node["properties"].get("x"), (int, float))
+        and isinstance(node["properties"].get("y"), (int, float))
+        for node in graph["nodes"]
+    )

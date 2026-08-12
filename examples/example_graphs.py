@@ -107,16 +107,16 @@ def les_miserables() -> nx.Graph:
 def supply_chain() -> dict[str, list[dict[str, Any]]]:
     """An original, license-safe property graph with typed relationships."""
     node_specs = [
-        ("mine-nl", "Supplier", "Limburg Silica", "Netherlands", 15),
-        ("mine-se", "Supplier", "Nordic Lithium", "Sweden", 15),
-        ("fab-de", "Factory", "Rhine Cell Fab", "Germany", 18),
-        ("fab-pl", "Factory", "Vistula Pack Assembly", "Poland", 18),
-        ("port-rtm", "Port", "Port of Rotterdam", "Netherlands", 14),
-        ("warehouse-be", "Warehouse", "Antwerp Hub", "Belgium", 14),
-        ("product-city", "Product", "City Battery", "Europe", 20),
-        ("product-grid", "Product", "Grid Storage Pack", "Europe", 20),
-        ("customer-transit", "Customer", "Metro Transit", "France", 16),
-        ("customer-utility", "Customer", "North Sea Utility", "Denmark", 16),
+        ("mine-nl", "Supplier", "Limburg Silica", "Netherlands", 15, -4, 2),
+        ("mine-se", "Supplier", "Nordic Lithium", "Sweden", 15, -4, -2),
+        ("fab-de", "Factory", "Rhine Cell Fab", "Germany", 18, -2, 1),
+        ("fab-pl", "Factory", "Vistula Pack Assembly", "Poland", 18, 0, -1),
+        ("port-rtm", "Port", "Port of Rotterdam", "Netherlands", 14, 0, 2),
+        ("warehouse-be", "Warehouse", "Antwerp Hub", "Belgium", 14, 4, -1),
+        ("product-city", "Product", "City Battery", "Europe", 20, 2, 0),
+        ("product-grid", "Product", "Grid Storage Pack", "Europe", 20, 2, -2),
+        ("customer-transit", "Customer", "Metro Transit", "France", 16, 6, 0),
+        ("customer-utility", "Customer", "North Sea Utility", "Denmark", 16, 6, -2),
     ]
     nodes = [
         {
@@ -126,10 +126,12 @@ def supply_chain() -> dict[str, list[dict[str, Any]]]:
                 "name": name,
                 "country": country,
                 "size": size,
+                "x": x,
+                "y": y,
                 "example": "synthetic",
             },
         }
-        for node_id, label, name, country, size in node_specs
+        for node_id, label, name, country, size, x, y in node_specs
     ]
 
     edge_specs = [

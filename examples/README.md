@@ -14,9 +14,13 @@ cd ../..
 uv run --extra examples streamlit run examples/app.py
 ```
 
-The gallery renders multiple live component instances using public datasets
-bundled with NetworkX, an original synthetic supply-chain graph, and a small
-Neo4j-compatible structural example. It also shows both themes side by side.
+The gallery opens with a large configurable graph and keeps its controls in the
+sidebar. The other pages present themes, supported Python inputs, layout
+families, and low-clutter display presets. Each page includes a minimal
+``st_sigma`` code example.
+
+The examples use public datasets bundled with NetworkX, an original synthetic
+supply-chain graph, and a small Neo4j-compatible structural example.
 To materialize JSON snapshots for adapter development:
 
 ```sh
