@@ -27,7 +27,9 @@ export const extractUniqueRelationshipTypes = (graphData: PropertyGraphData): st
 // Turn canonical property-graph data into a graphology Graph instance
 export const convertPropertyGraphToGraph = (
   graphData: PropertyGraphData,
-  labelColorMap: Map<string, string>
+  labelColorMap: Map<string, string>,
+  defaultNodeColor: string,
+  defaultEdgeColor: string,
 ): Graph => {
   const graph = new Graph({ multi: true });
 
@@ -35,7 +37,7 @@ export const convertPropertyGraphToGraph = (
   graphData.nodes.forEach(node => {
     const nodeId = node.id;
     const primaryLabel = node.labels[0] || 'Unknown';
-    const color = labelColorMap.get(primaryLabel) || '#9B8579';
+    const color = labelColorMap.get(primaryLabel) || defaultNodeColor;
     
     // compute size based on a "size" property or default
     const size = node.properties.size || 12;
@@ -74,7 +76,7 @@ export const convertPropertyGraphToGraph = (
       addEdge(sourceId, targetId, {
         id: edgeId,
         size: 2,
-        color: '#d4c4b0',
+        color: defaultEdgeColor,
 
         relType: relationship.type,
 
@@ -82,7 +84,7 @@ export const convertPropertyGraphToGraph = (
 
         label: relationship.type,
 
-        baseColor: '#d4c4b0',
+        baseColor: defaultEdgeColor,
         baseSize: 2,
       });
     }

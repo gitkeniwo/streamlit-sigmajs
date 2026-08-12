@@ -21,6 +21,7 @@ export interface PropertyGraphData {
 export interface StreamlitComponentArgs {
   graphData?: PropertyGraphData;
   height?: number;
+  theme?: 'streamlit' | 'humanistic';
 }
 
 export interface NodeInfo {

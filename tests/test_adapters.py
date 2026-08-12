@@ -57,3 +57,27 @@ def test_dataframe_missing_values_are_removed_from_properties():
     converted = from_dataframes(nodes, edges)
 
     assert converted["nodes"][0]["properties"] == {"name": "Ada"}
+
+
+def test_sigma_graph_rejects_unknown_theme(monkeypatch):
+    import st_sigma
+
+    monkeypatch.setattr(st_sigma, "_component_func", lambda **kwargs: kwargs)
+
+    with pytest.raises(ValueError, match="streamlit.*humanistic"):
+        st_sigma.sigma_graph({"nodes": [], "edges": []}, theme="neon")
+
+
+def test_sigma_graph_passes_normalized_data_and_theme(monkeypatch):
+    import st_sigma
+
+    monkeypatch.setattr(st_sigma, "_component_func", lambda **kwargs: kwargs)
+    result = st_sigma.sigma_graph(
+        {"nodes": [{"id": "1", "label": "Person"}], "edges": []},
+        theme="humanistic",
+        key="graph",
+    )
+
+    assert result["key"] == "graph"
+    assert result["data"]["theme"] == "humanistic"
+    assert result["data"]["graphData"]["nodes"][0]["labels"] == ["Person"]

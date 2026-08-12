@@ -89,19 +89,21 @@ def neo4jgraph_to_sigma(result):
     }
 
 
-def sigma_graph(graph, *, edges=None, height=600, key=None):
+def sigma_graph(graph, *, edges=None, height=600, theme="streamlit", key=None):
     """Render a supported graph value without a manual conversion step.
 
     ``graph`` may be a canonical or legacy graph dictionary, a NetworkX graph,
     a Neo4j ``Graph`` result, or a node DataFrame when ``edges`` is provided.
     """
+    if theme not in {"streamlit", "humanistic"}:
+        raise ValueError("theme must be 'streamlit' or 'humanistic'.")
     graph_data = normalize_graph(graph, edges=edges)
     return _component_func(
         key=key,
-        data={"graphData": graph_data, "height": height},
+        data={"graphData": graph_data, "height": height, "theme": theme},
     )
 
-def st_sigmagraph(graphData=None, height=600, key=None):
+def st_sigmagraph(graphData=None, height=600, theme="humanistic", key=None):
     """Render an interactive Sigma.js graph in a Streamlit app.
 
     Parameters
@@ -126,6 +128,6 @@ def st_sigmagraph(graphData=None, height=600, key=None):
     if graphData is None:
         return _component_func(
             key=key,
-            data={"graphData": None, "height": height},
+            data={"graphData": None, "height": height, "theme": theme},
         )
-    return sigma_graph(graphData, height=height, key=key)
+    return sigma_graph(graphData, height=height, theme=theme, key=key)

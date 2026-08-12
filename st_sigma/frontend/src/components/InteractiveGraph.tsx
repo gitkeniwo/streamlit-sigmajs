@@ -13,15 +13,13 @@ import {
   extractUniqueRelationshipTypes,
 } from '../utils/graphDataUtils';
 import { createLabelColorMap } from '../utils/colorUtils';
+import { getThemeTokens } from '../utils/theme';
 
 import './InteractiveGraph.css';
 
 interface InteractiveGraphProps {
   args: StreamlitComponentArgs;
 }
-
-const SELECTED_EDGE_COLOR = '#CC8B65';
-const MUTED_EDGE_COLOR = '#e8e3d8';
 
 const withOpacity = (color: string, opacity: string): string => {
   return /^#[0-9a-f]{6}$/i.test(color) ? `${color}${opacity}` : color;
@@ -48,6 +46,8 @@ const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
 
   const graphData = args.graphData;
   const componentHeight = args.height || 600;
+  const themeName = args.theme || 'streamlit';
+  const theme = getThemeTokens(themeName);
 
   const stableGraphData = useMemo(() => {
     return graphData ? JSON.stringify(graphData) : null;
@@ -83,12 +83,12 @@ const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
 
     const uniqueLabels = extractUniqueLabels(graphData);
     const uniqueRelTypes = extractUniqueRelationshipTypes(graphData);
-    const labelColorMap = createLabelColorMap(uniqueLabels);
+    const labelColorMap = createLabelColorMap(uniqueLabels, theme.palette);
 
     setNodeTypes(
       uniqueLabels.map((label) => ({
         type: label,
-        color: labelColorMap.get(label) || '#9B8579',
+        color: labelColorMap.get(label) || theme.node,
         description: `${label} nodes`,
       })),
     );
@@ -107,7 +107,12 @@ const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
       })),
     );
 
-    const graph = convertPropertyGraphToGraph(graphData, labelColorMap);
+    const graph = convertPropertyGraphToGraph(
+      graphData,
+      labelColorMap,
+      theme.node,
+      theme.edge,
+    );
     graphRef.current = graph;
 
     forceAtlas2.assign(graph, {
@@ -119,9 +124,9 @@ const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
     });
 
     const sigma = new Sigma(graph, containerRef.current, {
-      defaultEdgeColor: '#d4c4b0',
-      defaultNodeColor: '#9B8579',
-      labelColor: { color: '#4a4137' },
+      defaultEdgeColor: theme.edge,
+      defaultNodeColor: theme.node,
+      labelColor: { color: theme.text },
       labelSize: 14,
       labelWeight: '500',
       renderEdgeLabels: true,
@@ -176,12 +181,12 @@ const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
             displayData.color = graph.getNodeAttribute(selectedNodeId, 'baseColor');
             displayData.size = 3;
           } else {
-            displayData.color = MUTED_EDGE_COLOR;
+            displayData.color = theme.edgeMuted;
           }
         }
 
         if (selectedEdgeIdRef.current === edge) {
-          displayData.color = SELECTED_EDGE_COLOR;
+          displayData.color = theme.selected;
           displayData.size = 4;
         }
 
@@ -266,7 +271,7 @@ const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
         source: graph.getNodeAttribute(source, 'label'),
         target: graph.getNodeAttribute(target, 'label'),
         relType: attributes.relType || 'UNKNOWN',
-        color: SELECTED_EDGE_COLOR,
+        color: theme.selected,
         properties: attributes.properties || {},
       });
       sigma.refresh();
@@ -312,11 +317,11 @@ const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
       graphRef.current = null;
       document.body.style.cursor = 'default';
     };
-  }, [stableGraphData]);
+  }, [stableGraphData, themeName]);
 
   if (!graphData) {
     return (
-      <div className="graph-container">
+      <div className="graph-container" data-theme={themeName}>
         <div className="no-data-message">
           <h3>No Graph Data</h3>
           <p>Please provide graph data to visualize.</p>
@@ -326,7 +331,7 @@ const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
   }
 
   return (
-    <div className="graph-container">
+    <div className="graph-container" data-theme={themeName}>
       <div className="content-wrapper">
         <div
           ref={containerRef}

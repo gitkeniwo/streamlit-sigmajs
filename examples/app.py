@@ -20,6 +20,11 @@ st.caption("Small public graphs for exploring the component without a database."
 with st.sidebar:
     st.header("Graph")
     example_name = st.selectbox("Dataset", list(EXAMPLES))
+    theme = st.segmented_control(
+        "Theme",
+        ["streamlit", "humanistic"],
+        default="streamlit",
+    )
     height = st.slider("Canvas height", 400, 900, 650, 50)
     st.divider()
     st.markdown(
@@ -50,6 +55,7 @@ sigma_graph(
     graph,
     edges=edges,
     height=height,
+    theme=theme or "streamlit",
     key=f"gallery-{example_name}",
 )
 

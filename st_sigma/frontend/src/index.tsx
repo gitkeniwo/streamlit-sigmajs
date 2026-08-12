@@ -1,28 +1,45 @@
 import type { FrontendRenderer, FrontendState } from "@streamlit/component-v2-lib"
 import { StrictMode } from "react"
-import { createRoot } from "react-dom/client"
+import { createRoot, type Root } from "react-dom/client"
 import InteractiveGraph from "./components/InteractiveGraph"
 import type { StreamlitComponentArgs } from "./utils/types"
 import "./App.css"
+
+interface MountedComponent {
+  element: HTMLDivElement
+  root: Root
+  generation: number
+}
+
+const mountedComponents = new WeakMap<HTMLElement | ShadowRoot, MountedComponent>()
 
 const renderSigmaGraph: FrontendRenderer<FrontendState, StreamlitComponentArgs> = ({
   data,
   parentElement,
 }) => {
-  const mountElement = document.createElement("div")
-  mountElement.className = "sigma-component-root"
-  parentElement.appendChild(mountElement)
+  let mounted = mountedComponents.get(parentElement)
+  if (!mounted) {
+    const element = document.createElement("div")
+    element.className = "sigma-component-root"
+    parentElement.appendChild(element)
+    mounted = { element, root: createRoot(element), generation: 0 }
+    mountedComponents.set(parentElement, mounted)
+  }
+  mounted.generation += 1
+  const generation = mounted.generation
 
-  const root = createRoot(mountElement)
-  root.render(
+  mounted.root.render(
     <StrictMode>
       <InteractiveGraph args={data} />
     </StrictMode>,
   )
 
   return () => {
-    root.unmount()
-    mountElement.remove()
+    const current = mountedComponents.get(parentElement)
+    if (current !== mounted || current.generation !== generation) return
+    mounted.root.unmount()
+    mounted.element.remove()
+    mountedComponents.delete(parentElement)
   }
 }
 
