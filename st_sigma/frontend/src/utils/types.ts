@@ -25,6 +25,8 @@ export interface DisplayConfig {
   edge_label_size: number;
   label_density: number;
   label_rendered_size_threshold: number;
+  label_font_family: string;
+  label_font_url: string | null;
   show_legend: boolean;
   legend_collapsed: boolean;
   properties_panel: 'compact' | 'cards' | 'hidden';
@@ -33,14 +35,16 @@ export interface DisplayConfig {
 }
 
 export interface LayoutConfig {
-  name: 'forceatlas2' | 'circular' | 'random' | 'none';
+  name: 'forceatlas2' | 'force' | 'circular' | 'circlepack' | 'grid' | 'concentric' | 'hierarchical' | 'random' | 'none';
   iterations: number;
   gravity: number;
   scaling_ratio: number;
   lin_log_mode: boolean;
   strong_gravity_mode: boolean;
   dynamic_after_drag: boolean;
+  drag_solver: 'force' | 'forceatlas2';
   drag_relaxation_ms: number;
+  hierarchy_direction: 'TB' | 'BT' | 'LR' | 'RL';
 }
 
 export interface GraphConfig {

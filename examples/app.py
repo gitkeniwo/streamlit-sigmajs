@@ -139,13 +139,44 @@ else:
         )
         layout_name = st.selectbox(
             "Layout",
-            ["forceatlas2", "circular", "random", "none"],
+            [
+                "forceatlas2",
+                "force",
+                "circular",
+                "circlepack",
+                "grid",
+                "concentric",
+                "hierarchical",
+                "random",
+                "none",
+            ],
         )
         dynamic_after_drag = st.checkbox(
-            "Relax layout while dragging",
-            value=False,
-            disabled=layout_name != "forceatlas2",
-            help="Keeps the dragged node fixed while nearby nodes settle in a worker.",
+            "Relax layout after dragging",
+            value=True,
+            help=(
+                "After release, keeps the dragged node fixed while the other nodes "
+                "briefly settle around its new position."
+            ),
+        )
+        drag_solver = st.selectbox(
+            "Post-drag solver",
+            ["force", "forceatlas2"],
+            disabled=not dynamic_after_drag,
+            help="Force is gentler for interaction; ForceAtlas2 is better for larger graphs.",
+        )
+        drag_relaxation_ms = st.slider(
+            "Post-drag relaxation (ms)",
+            200,
+            3000,
+            1000,
+            100,
+            disabled=not dynamic_after_drag,
+        )
+        hierarchy_direction = st.selectbox(
+            "Hierarchy direction",
+            ["TB", "LR", "BT", "RL"],
+            disabled=layout_name != "hierarchical",
         )
         with st.expander("Labels and overlays"):
             node_labels = st.selectbox(
@@ -158,6 +189,26 @@ else:
             )
             node_label_size = st.slider("Node label size", 8, 22, 12)
             edge_label_size = st.slider("Edge label size", 7, 18, 9)
+            font_preset = st.selectbox(
+                "Label font",
+                ["System", "Space Grotesk (Google)", "IBM Plex Sans (Google)", "Georgia (local)"],
+            )
+            font_presets = {
+                "System": (
+                    "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+                    None,
+                ),
+                "Space Grotesk (Google)": (
+                    "'Space Grotesk', sans-serif",
+                    "https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&display=swap",
+                ),
+                "IBM Plex Sans (Google)": (
+                    "'IBM Plex Sans', sans-serif",
+                    "https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap",
+                ),
+                "Georgia (local)": ("Georgia, serif", None),
+            }
+            label_font_family, label_font_url = font_presets[font_preset]
             show_legend = st.checkbox("Show legend", value=True)
             legend_collapsed = st.checkbox(
                 "Start legend collapsed",
@@ -181,6 +232,8 @@ else:
             edge_labels=edge_labels,
             node_label_size=node_label_size,
             edge_label_size=edge_label_size,
+            label_font_family=label_font_family,
+            label_font_url=label_font_url,
             show_legend=show_legend,
             legend_collapsed=legend_collapsed,
             properties_panel=properties_panel,
@@ -188,7 +241,10 @@ else:
         ),
         layout=LayoutConfig(
             name=layout_name,
-            dynamic_after_drag=dynamic_after_drag and layout_name == "forceatlas2",
+            dynamic_after_drag=dynamic_after_drag,
+            drag_solver=drag_solver,
+            drag_relaxation_ms=drag_relaxation_ms,
+            hierarchy_direction=hierarchy_direction,
         ),
     )
     with canvas:

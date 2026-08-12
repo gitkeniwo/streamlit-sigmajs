@@ -101,13 +101,17 @@ def test_sigma_graph_serializes_advanced_display_and_layout_config(monkeypatch):
         display=DisplayConfig(
             node_labels="hover",
             edge_labels="hidden",
+            label_font_family="'IBM Plex Sans', sans-serif",
+            label_font_url="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans",
             properties_panel="cards",
             show_legend=False,
         ),
         layout=LayoutConfig(
-            name="circular",
+            name="hierarchical",
             iterations=42,
             dynamic_after_drag=True,
+            drag_solver="force",
+            hierarchy_direction="LR",
         ),
     )
 
@@ -119,8 +123,11 @@ def test_sigma_graph_serializes_advanced_display_and_layout_config(monkeypatch):
 
     assert result["data"]["config"]["display"]["node_labels"] == "hover"
     assert result["data"]["config"]["display"]["show_legend"] is False
+    assert result["data"]["config"]["display"]["label_font_family"].startswith("'IBM")
     assert result["data"]["config"]["layout"]["name"] == "random"
     assert result["data"]["config"]["layout"]["iterations"] == 42
+    assert result["data"]["config"]["layout"]["drag_solver"] == "force"
+    assert result["data"]["config"]["layout"]["hierarchy_direction"] == "LR"
 
 
 @pytest.mark.parametrize(
@@ -128,7 +135,10 @@ def test_sigma_graph_serializes_advanced_display_and_layout_config(monkeypatch):
     [
         (lambda: DisplayConfig(edge_labels="sometimes"), "edge_labels"),
         (lambda: DisplayConfig(selection_dimming=2), "selection_dimming"),
-        (lambda: LayoutConfig(name="grid"), "layout name"),
+        (lambda: DisplayConfig(label_font_family="  "), "label_font_family"),
+        (lambda: LayoutConfig(name="spiral"), "layout name"),
+        (lambda: LayoutConfig(drag_solver="spring"), "drag_solver"),
+        (lambda: LayoutConfig(hierarchy_direction="diagonal"), "hierarchy_direction"),
         (lambda: LayoutConfig(drag_relaxation_ms=-1), "drag_relaxation_ms"),
     ],
 )

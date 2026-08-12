@@ -58,6 +58,7 @@ export const convertPropertyGraphToGraph = (
       color: color,
       borderColor: color,
       type: 'border',
+      primaryLabel,
       labels: node.labels,
       properties: node.properties,
       baseSize: size,

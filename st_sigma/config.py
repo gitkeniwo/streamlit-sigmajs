@@ -7,7 +7,19 @@ from typing import Literal
 NodeLabelMode = Literal["auto", "hover", "hidden"]
 EdgeLabelMode = Literal["always", "hover", "hidden"]
 PropertiesPanelMode = Literal["compact", "cards", "hidden"]
-LayoutName = Literal["forceatlas2", "circular", "random", "none"]
+LayoutName = Literal[
+    "forceatlas2",
+    "force",
+    "circular",
+    "circlepack",
+    "grid",
+    "concentric",
+    "hierarchical",
+    "random",
+    "none",
+]
+DragSolver = Literal["force", "forceatlas2"]
+HierarchyDirection = Literal["TB", "BT", "LR", "RL"]
 
 
 @dataclass(frozen=True)
@@ -20,6 +32,8 @@ class DisplayConfig:
     edge_label_size: int = 9
     label_density: float = 0.8
     label_rendered_size_threshold: float = 6
+    label_font_family: str = "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+    label_font_url: str | None = None
     show_legend: bool = True
     legend_collapsed: bool = True
     properties_panel: PropertiesPanelMode = "compact"
@@ -35,6 +49,10 @@ class DisplayConfig:
             raise ValueError("properties_panel must be 'compact', 'cards', or 'hidden'.")
         if self.node_label_size <= 0 or self.edge_label_size <= 0:
             raise ValueError("Label sizes must be positive.")
+        if not self.label_font_family.strip():
+            raise ValueError("label_font_family must not be empty.")
+        if self.label_font_url is not None and not self.label_font_url.strip():
+            raise ValueError("label_font_url must be None or a non-empty stylesheet URL.")
         if not 0 <= self.label_density <= 1:
             raise ValueError("label_density must be between 0 and 1.")
         if not 0 <= self.selection_dimming <= 1:
@@ -43,7 +61,7 @@ class DisplayConfig:
 
 @dataclass(frozen=True)
 class LayoutConfig:
-    """Controls initial placement and optional drag-time relaxation."""
+    """Controls initial placement and optional post-drag relaxation."""
 
     name: LayoutName = "forceatlas2"
     iterations: int = 100
@@ -52,11 +70,27 @@ class LayoutConfig:
     lin_log_mode: bool = False
     strong_gravity_mode: bool = False
     dynamic_after_drag: bool = False
-    drag_relaxation_ms: int = 700
+    drag_solver: DragSolver = "force"
+    drag_relaxation_ms: int = 1000
+    hierarchy_direction: HierarchyDirection = "TB"
 
     def __post_init__(self) -> None:
-        if self.name not in {"forceatlas2", "circular", "random", "none"}:
-            raise ValueError("layout name must be 'forceatlas2', 'circular', 'random', or 'none'.")
+        if self.name not in {
+            "forceatlas2",
+            "force",
+            "circular",
+            "circlepack",
+            "grid",
+            "concentric",
+            "hierarchical",
+            "random",
+            "none",
+        }:
+            raise ValueError("Unsupported layout name.")
+        if self.drag_solver not in {"force", "forceatlas2"}:
+            raise ValueError("drag_solver must be 'force' or 'forceatlas2'.")
+        if self.hierarchy_direction not in {"TB", "BT", "LR", "RL"}:
+            raise ValueError("hierarchy_direction must be 'TB', 'BT', 'LR', or 'RL'.")
         if self.iterations < 0:
             raise ValueError("iterations must be non-negative.")
         if self.gravity < 0 or self.scaling_ratio <= 0:

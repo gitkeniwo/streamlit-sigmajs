@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Graph from 'graphology';
-import forceAtlas2 from 'graphology-layout-forceatlas2';
+import forceLayout from 'graphology-layout-force';
 import FA2LayoutSupervisor from 'graphology-layout-forceatlas2/worker';
-import { circular, random } from 'graphology-layout';
 import Sigma from 'sigma';
 import { NodeBorderProgram } from '@sigma/node-border';
 
@@ -17,6 +16,7 @@ import {
 } from '../utils/graphDataUtils';
 import { createLabelColorMap } from '../utils/colorUtils';
 import { getThemeTokens } from '../utils/theme';
+import { applyInitialLayout } from '../utils/layoutUtils';
 
 import './InteractiveGraph.css';
 
@@ -32,6 +32,8 @@ const DEFAULT_CONFIG: GraphConfig = {
     edge_label_size: 9,
     label_density: 0.8,
     label_rendered_size_threshold: 6,
+    label_font_family: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+    label_font_url: null,
     show_legend: true,
     legend_collapsed: true,
     properties_panel: 'compact',
@@ -46,7 +48,9 @@ const DEFAULT_CONFIG: GraphConfig = {
     lin_log_mode: false,
     strong_gravity_mode: false,
     dynamic_after_drag: false,
-    drag_relaxation_ms: 700,
+    drag_solver: 'force',
+    drag_relaxation_ms: 1000,
+    hierarchy_direction: 'TB',
   },
 };
 
@@ -67,6 +71,28 @@ const mixColors = (foreground: string, background: string, amount: number): stri
     ((from >> shift) & 255) * (1 - amount) + ((to >> shift) & 255) * amount,
   );
   return `#${[16, 8, 0].map((shift) => channel(shift).toString(16).padStart(2, '0')).join('')}`;
+};
+
+const getStableGraphBounds = (graph: Graph) => {
+  let minX = Infinity;
+  let maxX = -Infinity;
+  let minY = Infinity;
+  let maxY = -Infinity;
+  graph.forEachNode((_node, attributes) => {
+    minX = Math.min(minX, attributes.x);
+    maxX = Math.max(maxX, attributes.x);
+    minY = Math.min(minY, attributes.y);
+    maxY = Math.max(maxY, attributes.y);
+  });
+  if (!Number.isFinite(minX) || !Number.isFinite(minY)) {
+    return { x: [-1, 1] as [number, number], y: [-1, 1] as [number, number] };
+  }
+  const xPadding = Math.max((maxX - minX) * 0.08, 0.5);
+  const yPadding = Math.max((maxY - minY) * 0.08, 0.5);
+  return {
+    x: [minX - xPadding, maxX + xPadding] as [number, number],
+    y: [minY - yPadding, maxY + yPadding] as [number, number],
+  };
 };
 
 const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
@@ -102,6 +128,22 @@ const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
   const stableConfig = useMemo(() => JSON.stringify(config), [config]);
 
   const refresh = () => sigmaRef.current?.refresh();
+
+  useEffect(() => {
+    const fontUrl = displayConfig.label_font_url?.trim();
+    if (!fontUrl) return;
+
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = fontUrl;
+    link.dataset.sigmaFont = 'true';
+    link.onload = () => {
+      document.fonts?.ready.then(refresh);
+    };
+    document.head.appendChild(link);
+
+    return () => link.remove();
+  }, [displayConfig.label_font_url, displayConfig.label_font_family]);
 
   const clearSelectedNode = () => {
     selectedNodeIdRef.current = null;
@@ -171,24 +213,17 @@ const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
       strongGravityMode: layoutConfig.strong_gravity_mode,
     };
 
-    if (layoutConfig.name === 'circular') {
-      circular.assign(graph);
-    } else if (layoutConfig.name === 'random') {
-      random.assign(graph);
-    } else if (layoutConfig.name === 'forceatlas2' && layoutConfig.iterations > 0) {
-      forceAtlas2.assign(graph, {
-        iterations: layoutConfig.iterations,
-        settings: forceAtlasSettings,
-      });
-    }
+    applyInitialLayout(graph, layoutConfig, forceAtlasSettings);
 
     const sigma = new Sigma(graph, containerRef.current, {
       nodeProgramClasses: { border: NodeBorderProgram },
       defaultEdgeColor: theme.edge,
       defaultNodeColor: theme.node,
       labelColor: { color: theme.text },
+      labelFont: displayConfig.label_font_family,
       labelSize: displayConfig.node_label_size,
       labelWeight: '500',
+      edgeLabelFont: displayConfig.label_font_family,
       edgeLabelSize: displayConfig.edge_label_size,
       labelDensity: displayConfig.label_density,
       labelRenderedSizeThreshold: displayConfig.label_rendered_size_threshold,
@@ -311,16 +346,24 @@ const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
         return displayData;
       },
     });
+    const stableGraphBounds = getStableGraphBounds(graph);
+    sigma.setCustomBBox(stableGraphBounds);
+    sigma.refresh();
     sigmaRef.current = sigma;
 
     let dynamicLayout: FA2LayoutSupervisor | null = null;
     let relaxationTimer: ReturnType<typeof setTimeout> | null = null;
+    let forceFrame: number | null = null;
     let fixedLayoutNode: string | null = null;
     let draggedPosition: { x: number; y: number } | null = null;
+    let dragMoved = false;
+    let suppressNodeClickUntil = 0;
 
     const stopDynamicLayout = () => {
       if (relaxationTimer) clearTimeout(relaxationTimer);
       relaxationTimer = null;
+      if (forceFrame !== null) cancelAnimationFrame(forceFrame);
+      forceFrame = null;
       dynamicLayout?.stop();
       dynamicLayout?.kill();
       dynamicLayout = null;
@@ -331,45 +374,86 @@ const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
       draggedPosition = null;
     };
 
-    const startDynamicLayout = (node: string) => {
-      if (!layoutConfig.dynamic_after_drag || layoutConfig.name !== 'forceatlas2') return;
+    const startPostDragLayout = (
+      node: string,
+      position: { x: number; y: number },
+    ) => {
+      if (!layoutConfig.dynamic_after_drag || layoutConfig.drag_relaxation_ms === 0) return false;
       stopDynamicLayout();
       fixedLayoutNode = node;
-      draggedPosition = {
-        x: graph.getNodeAttribute(node, 'x'),
-        y: graph.getNodeAttribute(node, 'y'),
-      };
+      draggedPosition = position;
       graph.setNodeAttribute(node, 'fixed', true);
-      dynamicLayout = new FA2LayoutSupervisor(graph, {
-        settings: { ...forceAtlasSettings, slowDown: 5 },
-        outputReducer: (key, attributes) => {
-          if (key === fixedLayoutNode && draggedPosition) {
-            return { ...attributes, ...draggedPosition };
-          }
-          return attributes;
-        },
-      });
-      dynamicLayout.start();
+
+      if (layoutConfig.drag_solver === 'force') {
+        const graphSpan = Math.max(
+          stableGraphBounds.x[1] - stableGraphBounds.x[0],
+          stableGraphBounds.y[1] - stableGraphBounds.y[0],
+          1,
+        );
+        const runForceFrame = () => {
+          if (!fixedLayoutNode || !draggedPosition) return;
+          forceLayout.assign(graph, {
+            maxIterations: 1,
+            isNodeFixed: (key) => key === fixedLayoutNode,
+            settings: {
+              attraction: 0.00008,
+              repulsion: 0.04,
+              gravity: 0.00001,
+              inertia: 0,
+              maxMove: graphSpan * 0.0015,
+            },
+          });
+          graph.mergeNodeAttributes(fixedLayoutNode, draggedPosition);
+          sigma.refresh();
+          forceFrame = requestAnimationFrame(runForceFrame);
+        };
+        runForceFrame();
+      } else {
+        dynamicLayout = new FA2LayoutSupervisor(graph, {
+          settings: { ...forceAtlasSettings, slowDown: 8 },
+          outputReducer: (key, attributes) => {
+            if (key === fixedLayoutNode && draggedPosition) {
+              return { ...attributes, ...draggedPosition };
+            }
+            return attributes;
+          },
+        });
+        dynamicLayout.start();
+      }
+      relaxationTimer = setTimeout(() => {
+        stopDynamicLayout();
+        sigma.refresh();
+      }, layoutConfig.drag_relaxation_ms);
+      return true;
     };
 
     const finishDragging = () => {
+      const draggedNode = draggedNodeRef.current;
+      const finalPosition = draggedNode && graph.hasNode(draggedNode)
+        ? {
+            x: graph.getNodeAttribute(draggedNode, 'x'),
+            y: graph.getNodeAttribute(draggedNode, 'y'),
+          }
+        : null;
       isDraggingRef.current = false;
       draggedNodeRef.current = null;
       document.body.style.cursor = 'default';
-      if (dynamicLayout) {
-        relaxationTimer = setTimeout(
-          stopDynamicLayout,
-          layoutConfig.drag_relaxation_ms,
-        );
+      sigma.setSetting('enableCameraPanning', true);
+      if (dragMoved && draggedNode && finalPosition) {
+        suppressNodeClickUntil = Date.now() + 150;
+        startPostDragLayout(draggedNode, finalPosition);
       }
+      dragMoved = false;
       sigma.refresh();
     };
 
     sigma.on('downNode', ({ node }) => {
+      stopDynamicLayout();
+      sigma.setSetting('enableCameraPanning', false);
       isDraggingRef.current = true;
       draggedNodeRef.current = node;
+      dragMoved = false;
       document.body.style.cursor = 'grabbing';
-      startDynamicLayout(node);
       sigma.refresh();
     });
 
@@ -377,6 +461,7 @@ const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
       if (!isDraggingRef.current || !draggedNodeRef.current) return;
 
       const position = sigma.viewportToGraph(event);
+      dragMoved = true;
       draggedPosition = position;
       graph.setNodeAttribute(draggedNodeRef.current, 'x', position.x);
       graph.setNodeAttribute(draggedNodeRef.current, 'y', position.y);
@@ -392,6 +477,7 @@ const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
       if (!isDraggingRef.current || !draggedNodeRef.current) return;
 
       const position = sigma.viewportToGraph(event.touches[0]);
+      dragMoved = true;
       draggedPosition = position;
       graph.setNodeAttribute(draggedNodeRef.current, 'x', position.x);
       graph.setNodeAttribute(draggedNodeRef.current, 'y', position.y);
@@ -403,7 +489,7 @@ const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
     sigma.getTouchCaptor().on('touchup', finishDragging);
 
     sigma.on('clickNode', ({ node }) => {
-      if (isDraggingRef.current) return;
+      if (isDraggingRef.current || Date.now() < suppressNodeClickUntil) return;
 
       const attributes = graph.getNodeAttributes(node);
       selectedNodeIdRef.current = node;
@@ -497,7 +583,11 @@ const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
   }
 
   return (
-    <div className="graph-container" data-theme={themeName}>
+    <div
+      className="graph-container"
+      data-theme={themeName}
+      style={{ fontFamily: displayConfig.label_font_family }}
+    >
       <div className="content-wrapper">
         <div
           ref={containerRef}

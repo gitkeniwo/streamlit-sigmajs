@@ -172,18 +172,24 @@ config = GraphConfig(
         edge_labels="hidden",      # "always" | "hover" | "hidden"
         node_label_size=11,
         edge_label_size=8,
+        label_font_family="'IBM Plex Sans', sans-serif",
+        label_font_url=(
+            "https://fonts.googleapis.com/css2?"
+            "family=IBM+Plex+Sans:wght@400;500;600&display=swap"
+        ),
         properties_panel="compact",  # "compact" | "cards" | "hidden"
         show_legend=True,
         legend_collapsed=True,
         selection_dimming=0.68,
     ),
     layout=LayoutConfig(
-        name="forceatlas2",        # "circular" | "random" | "none"
+        name="forceatlas2",
         iterations=120,
         gravity=1.0,
         scaling_ratio=12.0,
         dynamic_after_drag=True,
-        drag_relaxation_ms=700,
+        drag_solver="force",       # gentler interaction; or "forceatlas2"
+        drag_relaxation_ms=1000,
     ),
 )
 
@@ -195,3 +201,13 @@ For a layout preset without custom settings, use the shorter form:
 ```python
 sigma_graph(graph, layout="circular")
 ```
+
+Available initial layouts are `forceatlas2`, `force`, `circular`,
+`circlepack`, `grid`, `concentric`, `hierarchical`, `random`, and `none`.
+`hierarchical` also accepts `hierarchy_direction="TB"`, `"BT"`, `"LR"`, or
+`"RL"`. Post-drag relaxation is separate from the initial layout: the dragged
+node stays fixed at its new position while the remaining nodes briefly settle.
+
+For a locally installed font, set `label_font_family` only. For Google Fonts or
+a self-hosted `@font-face` stylesheet, also pass its CSS URL through
+`label_font_url`.
