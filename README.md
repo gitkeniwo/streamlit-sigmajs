@@ -62,11 +62,15 @@ npm run build
 cd ../..
 uv build
 ```
-3. Validate and publish the distributions:
+3. Validate the distributions locally:
 ```sh
 uvx twine check dist/*
-uv publish
 ```
+
+PyPI releases are published by the `publish` GitHub Actions workflow using
+[Trusted Publishing](https://docs.pypi.org/trusted-publishers/). Push a version
+tag such as `v0.1.2`, or manually dispatch the workflow for an existing tag.
+No PyPI API token is stored in GitHub.
 
 ## Usage 
 
