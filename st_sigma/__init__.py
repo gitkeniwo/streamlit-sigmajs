@@ -1,96 +1,130 @@
-import os
-import streamlit.components.v1 as components
+from pathlib import Path
+from dataclasses import asdict
+from typing import Any, Literal
 
-_RELEASE = True
+import streamlit as st
+from streamlit.errors import StreamlitAPIException
 
-# Declare a Streamlit component. `declare_component` returns a function
-# that is used to create instances of the component. We're naming this
-# function "_component_func", with an underscore prefix, because we don't want
-# to expose it directly to users. Instead, we will create a custom wrapper
-# function, below, that will serve as our component's public API.
+from .adapters import (
+    from_dataframes,
+    from_mapping,
+    from_neo4j,
+    from_networkx,
+    normalize_graph,
+    serialize_value,
+)
+from .schema import PropertyGraph, PropertyGraphEdge, PropertyGraphNode
+from .config import DisplayConfig, GraphConfig, LayoutConfig, resolve_config
 
-# It's worth noting that this call to `declare_component` is the
-# *only thing* you need to do to create the binding between Streamlit and
-# your component frontend. Everything else we do in this file is simply a
-# best practice.
+__all__ = [
+    "PropertyGraph",
+    "PropertyGraphEdge",
+    "PropertyGraphNode",
+    "DisplayConfig",
+    "GraphConfig",
+    "LayoutConfig",
+    "from_dataframes",
+    "from_mapping",
+    "from_neo4j",
+    "from_networkx",
+    "neo4jgraph_to_sigma",
+    "normalize_graph",
+    "serialize_neo4j_value",
+    "sigma_graph",
+    "st_sigmagraph",
+]
 
-if not _RELEASE:
-    _component_func = components.declare_component(
-        # We give the component a simple, descriptive name ("my_component"
-        # does not fit this bill, so please choose something better for your
-        # own component :)
-        "st_sigmagraph",
-        # Pass `url` here to tell Streamlit that the component will be served
-        # by the local dev server that you run via `npm run start`.
-        # (This is useful while your component is in development.)
-        url="http://localhost:3001",
-    )
-else:
-    # When we're distributing a production version of the component, we'll
-    # replace the `url` param with `path`, and point it to the component's
-    # build directory:
-    parent_dir = os.path.dirname(os.path.abspath(__file__))
-    build_dir = os.path.join(parent_dir, "frontend/build")
-    _component_func = components.declare_component("st_sigmagraph", path=build_dir)
+
+def _register_component():
+    """Register packaged assets, with an inline fallback for editable installs."""
+    try:
+        return st.components.v2.component(
+            "streamlit-sigmajs.sigma_graph",
+            js="index-*.js",
+            css="style-*.css",
+        )
+    except StreamlitAPIException:
+        # Streamlit discovers v2 manifests from installed distribution files.
+        # Editable installs may not expose package data in that file list, so
+        # use the same built assets inline for local development and tests.
+        build_dir = Path(__file__).parent / "frontend" / "build"
+        js_files = list(build_dir.glob("index-*.js"))
+        css_files = list(build_dir.glob("style-*.css"))
+        if len(js_files) != 1 or len(css_files) != 1:
+            raise
+        return st.components.v2.component(
+            "streamlit-sigmajs.sigma_graph",
+            js=js_files[0].read_text(encoding="utf-8"),
+            # A line break makes the minified stylesheet unambiguously inline
+            # to Streamlit's path/content classifier.
+            css="/* editable-install fallback */\n"
+            + css_files[0].read_text(encoding="utf-8"),
+        )
+
+
+_component_func = _register_component()
 
 
 def serialize_neo4j_value(val):
-    import math
-    import numpy as np
-
-    # Neo4j Date/Time types
-    if hasattr(val, "isoformat"):
-        return val.isoformat()
-    if isinstance(val, (float, np.floating)) and (math.isnan(val) or math.isinf(val)):
-        return None
-    if val is None or val is np.nan:
-        return None
-    if isinstance(val, (list, tuple)):
-        return [serialize_neo4j_value(v) for v in val]
-    if isinstance(val, dict):
-        return {k: serialize_neo4j_value(v) for k, v in val.items()}
-    return val
+    """Backward-compatible alias for :func:`serialize_value`."""
+    return serialize_value(val)
 
 
 def neo4jgraph_to_sigma(result):
-    """Convert a Neo4j graph result without requiring the Neo4j package."""
-    nodes = []
-    relationships = []
-
-    for node in result.nodes:
-        nodes.append(
+    """Convert Neo4j data to the legacy v0.1 dictionary shape."""
+    graph = from_neo4j(result)
+    return {
+        "nodes": [
             {
-                "identity": node.element_id,
-                "labels": list(node.labels),
-                "properties": {
-                    key: serialize_neo4j_value(value)
-                    for key, value in dict(node).items()
-                },
+                "identity": node["id"],
+                "labels": node["labels"],
+                "properties": node["properties"],
             }
-        )
-
-    for relationship in result.relationships:
-        relationships.append(
+            for node in graph["nodes"]
+        ],
+        "relationships": [
             {
-                "identity": relationship.element_id,
-                "start": relationship.start_node.element_id,
-                "end": relationship.end_node.element_id,
-                "type": relationship.type,
-                "properties": {
-                    key: serialize_neo4j_value(value)
-                    for key, value in dict(relationship).items()
-                },
+                "identity": edge["id"],
+                "start": edge["source"],
+                "end": edge["target"],
+                "type": edge["type"],
+                "properties": edge["properties"],
             }
-        )
+            for edge in graph["edges"]
+        ],
+    }
 
-    return {"nodes": nodes, "relationships": relationships}
 
-# Create a wrapper function for the component. This is an optional
-# best practice - we could simply expose the component function returned by
-# `declare_component` and call it done. The wrapper allows us to customize
-# our component's API: we can pre-process its input args, post-process its
-# output value, and add a docstring for users.
-def st_sigmagraph(graphData=None, height=600, key=None):
+def sigma_graph(
+    graph: object,
+    *,
+    edges: object | None = None,
+    height: int = 600,
+    theme: Literal["streamlit", "humanistic"] = "streamlit",
+    layout: str | LayoutConfig | None = None,
+    config: GraphConfig | None = None,
+    key: str | None = None,
+) -> Any:
+    """Render a supported graph value without a manual conversion step.
+
+    ``graph`` may be a canonical or legacy graph dictionary, a NetworkX graph,
+    a Neo4j ``Graph`` result, or a node DataFrame when ``edges`` is provided.
+    """
+    if theme not in {"streamlit", "humanistic"}:
+        raise ValueError("theme must be 'streamlit' or 'humanistic'.")
+    graph_data = normalize_graph(graph, edges=edges)
+    resolved_config = resolve_config(config, layout)
+    return _component_func(
+        key=key,
+        data={
+            "graphData": graph_data,
+            "height": height,
+            "theme": theme,
+            "config": asdict(resolved_config),
+        },
+    )
+
+def st_sigmagraph(graphData=None, height=600, theme="humanistic", key=None):
     """Render an interactive Sigma.js graph in a Streamlit app.
 
     Parameters
@@ -107,24 +141,14 @@ def st_sigmagraph(graphData=None, height=600, key=None):
 
     Returns
     -------
-    object or None
-        The latest value sent by the frontend. The current frontend does not
-        emit interaction values, so this is normally ``None``.
+    streamlit.components.v2.component.ComponentResult
+        Persistent component state. Interaction values will be added to this
+        result as the public API evolves.
 
     """
-    # Call through to our private component function. Arguments we pass here
-    # will be sent to the frontend, where they'll be available in an "args"
-    # dictionary.
-    #
-    # "default" is a special argument that specifies the initial return
-    # value of the component before the user has interacted with it.
-    
-
-    component_value = _component_func(
-        graphData=graphData,
-        height=height,
-        key=key,
-        default=None,
-    )
-    
-    return component_value
+    if graphData is None:
+        return _component_func(
+            key=key,
+            data={"graphData": None, "height": height, "theme": theme},
+        )
+    return sigma_graph(graphData, height=height, theme=theme, key=key)

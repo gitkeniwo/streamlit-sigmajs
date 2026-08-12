@@ -13,12 +13,26 @@ export default defineConfig(({ mode }) => {
 
   return {
     base: "./",
+    define: {
+      "process.env.NODE_ENV": JSON.stringify("production"),
+    },
     plugins: [react()],
     server: {
       port,
     },
     build: {
       outDir: "build",
+      emptyOutDir: true,
+      lib: {
+        entry: "./src/index.tsx",
+        formats: ["es"],
+      },
+      rollupOptions: {
+        output: {
+          entryFileNames: "index-[hash].js",
+          assetFileNames: "style-[hash][extname]",
+        },
+      },
     },
   } satisfies UserConfig
 })

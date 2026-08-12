@@ -1,6 +1,6 @@
 [project]
 name = "streamlit-sigmajs"
-version = "0.1.2"
+version = "0.2.0"
 description = "Interactive property graph visualization for Streamlit, powered by Sigma.js"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -9,14 +9,20 @@ authors = [
 ]
 license-files = ["LICENSE"]
 dependencies = [
-    "streamlit>=1.50.0",
+    "streamlit>=1.51.0",
 ]
 
 [project.optional-dependencies]
 dev = [
     "build>=1.2",
+    "networkx>=3.2",
+    "pandas>=2.0",
     "pytest>=8.0",
     "twine>=5.0",
+]
+examples = [
+    "networkx>=3.2",
+    "pandas>=2.0",
 ]
 
 [project.urls]
@@ -33,4 +39,4 @@ build-backend = "setuptools.build_meta"
 include = ["st_sigma*"]
 
 [tool.setuptools.package-data]
-st_sigma = ["frontend/build/*", "frontend/build/**/*"]
+st_sigma = ["pyproject.toml", "frontend/build/*", "frontend/build/**/*"]

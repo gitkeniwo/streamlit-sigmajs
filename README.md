@@ -4,18 +4,24 @@
 [![pypi](https://img.shields.io/pypi/v/streamlit-sigmajs)](https://pypi.org/project/streamlit-sigmajs)
 
 A Streamlit component for interactive property graph visualization, powered by Sigma.js.
+Pass NetworkX graphs, Neo4j graph results, node/edge DataFrames, or a plain
+property-graph dictionary directly from Python.
 
 ## Demo
 
 <img width="1448" height="988" alt="image" src="https://github.com/user-attachments/assets/7b82119a-70a5-4037-94e2-e461bfa8a923" />
 
-## Roadmap
+## Features
+
 - [x] Basic graph visualization
-- [x] Node and edge styling
+- [x] NetworkX, Neo4j, DataFrame, and dictionary inputs
+- [x] Streamlit-native and humanistic themes
 - [x] In-component node and edge selection
+- [x] Multiple independent graphs on one Streamlit page
+- [x] ForceAtlas2, circular, random, and pre-positioned layouts
+- [x] Compact/card property inspectors and configurable labels/legend
+- [x] Optional worker-based layout relaxation while dragging
 - [ ] Python interaction callbacks
-- [ ] Graph layouts
-- [ ] Theming
 
 ## Local Installation
 
@@ -39,11 +45,15 @@ npm ci
 npm run start
 ```
 
-To start the bundled example app, run:
+To start the repository example app, run:
 
 ```sh
-uv run --with neo4j streamlit run st_sigma/example.py
+uv run --extra examples streamlit run examples/app.py
 ```
+
+The tracked gallery includes NetworkX, DataFrame, and synthetic property-graph
+examples. Materialized and third-party datasets are kept in the ignored
+`examples/data/` cache; see [`examples/README.md`](examples/README.md).
 
 ## Install from PyPI
 
@@ -72,59 +82,132 @@ PyPI releases are published by the `publish` GitHub Actions workflow using
 tag such as `v0.1.2`, or manually dispatch the workflow for an existing tag.
 No PyPI API token is stored in GitHub.
 
-## Usage 
+## Usage
 
-The graph visualizer takes a customized graph dictionary in its `graphData` argument.
-You can convert a Neo4j graph result to the required dictionary using the `neo4jgraph_to_sigma` utility function.
-The `neo4jgraph_to_sigma` function takes a `neo4j.Graph` object as input, usually the results you get from `driver.execute_query(..., result_transformer_=neo4j.Result.graph)`.
+For NetworkX, pass the graph directly. Node attributes become properties;
+`label` or `labels` controls node types, and edge `type` controls relationship
+types.
 
 ```python
 import streamlit as st
-from st_sigma import st_sigmagraph, neo4jgraph_to_sigma
+import networkx as nx
+from st_sigma import sigma_graph
 
+graph = nx.karate_club_graph()
+sigma_graph(graph, height=600, theme="streamlit", key="karate")
+```
+
+For DataFrames, pass the node table as the first argument and the edge table
+with `edges=`. Nodes require `id`; edges require `source` and `target`.
+
+```python
+import pandas as pd
+from st_sigma import sigma_graph
+
+nodes = pd.DataFrame([
+    {"id": "ada", "label": "Person", "name": "Ada Lovelace"},
+    {"id": "engine", "label": "Work", "name": "Analytical Engine Notes"},
+])
+edges = pd.DataFrame([
+    {"id": "r1", "source": "ada", "target": "engine", "type": "AUTHORED"},
+])
+sigma_graph(nodes, edges=edges, theme="humanistic")
+```
+
+Neo4j results returned with `neo4j.Result.graph` also work directly—no
+conversion helper is required:
+
+```python
 import neo4j
 from neo4j import GraphDatabase
+from st_sigma import sigma_graph
 
-NEO4J_URI = "bolt://localhost:7677"
-NEO4J_USER = "neo4j"
-NEO4J_PASSWORD = "your_password"
+with GraphDatabase.driver(NEO4J_URI, auth=AUTH) as driver:
+    graph = driver.execute_query(
+        "MATCH (a)-[r]->(b) RETURN a, r, b LIMIT 100",
+        result_transformer_=neo4j.Result.graph,
+    )
 
-def query_neo4j_graph(query):
-    
-    with GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD)) as driver:
-        result = driver.execute_query( query, result_transformer_ = neo4j.Result.graph )
-        
-        return result
+sigma_graph(graph, height=650, key="neo4j")
+```
 
+Plain dictionaries use one canonical property-graph schema:
 
-query = st.text_area(
-    "Enter Cypher Query",
-    value="MATCH (n)-[r]->(m) RETURN n, r, m LIMIT 4",
-    height=100
+```python
+graph = {
+    "nodes": [
+        {"id": "ada", "labels": ["Person"], "properties": {"name": "Ada"}},
+        {"id": "engine", "labels": ["Work"], "properties": {"name": "Notes"}},
+    ],
+    "edges": [
+        {
+            "id": "r1",
+            "source": "ada",
+            "target": "engine",
+            "type": "AUTHORED",
+            "properties": {"year": 1843},
+            "directed": True,
+        },
+    ],
+}
+sigma_graph(graph)
+```
+
+`theme="streamlit"` is the default and follows the host app's theme variables.
+Use `theme="humanistic"` for the original warm, low-saturation visual style.
+The v0.1 `st_sigmagraph(graphData=...)` API remains available for compatibility.
+
+### Display and layout configuration
+
+The default presentation uses a compact properties panel, a collapsed legend,
+automatic node labels, and edge labels shown only on hover. Advanced options
+are grouped so the main function stays small:
+
+```python
+from st_sigma import DisplayConfig, GraphConfig, LayoutConfig, sigma_graph
+
+config = GraphConfig(
+    display=DisplayConfig(
+        node_labels="hover",       # "auto" | "hover" | "hidden"
+        edge_labels="hidden",      # "always" | "hover" | "hidden"
+        node_label_size=11,
+        edge_label_size=8,
+        label_font_family="'IBM Plex Sans', sans-serif",
+        label_font_url=(
+            "https://fonts.googleapis.com/css2?"
+            "family=IBM+Plex+Sans:wght@400;500;600&display=swap"
+        ),
+        properties_panel="compact",  # "compact" | "cards" | "hidden"
+        show_legend=True,
+        legend_collapsed=True,
+        selection_dimming=0.68,
+    ),
+    layout=LayoutConfig(
+        name="forceatlas2",
+        iterations=120,
+        gravity=1.0,
+        scaling_ratio=12.0,
+        dynamic_after_drag=True,
+        drag_solver="force",       # gentler interaction; or "forceatlas2"
+        drag_relaxation_ms=1000,
+    ),
 )
 
-st.subheader("Component with variable args")
-
-
-height = st.slider("Graph Height", min_value=200, max_value=800, value=600, step=50)
-
-
-if st.button("Visualize Graph"):
-    try:
-        with st.spinner("Querying Neo4j..."):
-            result = query_neo4j_graph(query)
-            result = neo4jgraph_to_sigma(result)
-            
-            if not result["nodes"]:
-                st.warning("No nodes found in the query result.")
-            else:
-                st.success(f"Found {len(result['nodes'])} nodes and {len(result['relationships'])} relationships")
-                
-                st_sigmagraph(
-                    graphData=result,
-                    height=height,
-                    key="neo4j_graph"
-                )
-    except Exception as e:
-        st.error(f"Error: {str(e)}")
+sigma_graph(graph, config=config)
 ```
+
+For a layout preset without custom settings, use the shorter form:
+
+```python
+sigma_graph(graph, layout="circular")
+```
+
+Available initial layouts are `forceatlas2`, `force`, `circular`,
+`circlepack`, `grid`, `concentric`, `hierarchical`, `random`, and `none`.
+`hierarchical` also accepts `hierarchy_direction="TB"`, `"BT"`, `"LR"`, or
+`"RL"`. Post-drag relaxation is separate from the initial layout: the dragged
+node stays fixed at its new position while the remaining nodes briefly settle.
+
+For a locally installed font, set `label_font_family` only. For Google Fonts or
+a self-hosted `@font-face` stylesheet, also pass its CSS URL through
+`label_font_url`.

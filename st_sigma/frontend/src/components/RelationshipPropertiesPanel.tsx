@@ -97,14 +97,16 @@ const PropertiesGroup: React.FC<PropertiesGroupProps> = ({ properties }) => {
 export interface RelationshipPropertiesPanelProps {
   selectedEdge: EdgeInfo;
   onClose: () => void;
+  mode?: 'compact' | 'cards';
 }
 
 const RelationshipPropertiesPanel: React.FC<RelationshipPropertiesPanelProps> = ({ 
   selectedEdge, 
-  onClose 
+  onClose,
+  mode = 'compact',
 }) => {
   return (
-    <div className="properties-panel relationship-panel">
+    <div className={`properties-panel relationship-panel properties-panel--${mode}`}>
       <div className="properties-header">
         <h3>Relationship Properties</h3>
         <button className="close-button" onClick={onClose}>

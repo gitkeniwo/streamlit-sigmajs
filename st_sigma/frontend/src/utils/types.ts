@@ -1,26 +1,62 @@
-// Neo4j 数据结构类型定义
-export interface Neo4jNode {
-  identity: number | string;
+export interface PropertyGraphNode {
+  id: string;
   labels: string[];
   properties: Record<string, any>;
 }
 
-export interface Neo4jRelationship {
-  identity: number | string;
-  start: number | string;
-  end: number | string;
+export interface PropertyGraphEdge {
+  id: string;
+  source: string;
+  target: string;
   type: string;
   properties: Record<string, any>;
+  directed: boolean;
 }
 
-export interface Neo4jGraphData {
-  nodes: Neo4jNode[];
-  relationships: Neo4jRelationship[];
+export interface PropertyGraphData {
+  nodes: PropertyGraphNode[];
+  edges: PropertyGraphEdge[];
+}
+
+export interface DisplayConfig {
+  node_labels: 'auto' | 'hover' | 'hidden';
+  edge_labels: 'always' | 'hover' | 'hidden';
+  node_label_size: number;
+  edge_label_size: number;
+  label_density: number;
+  label_rendered_size_threshold: number;
+  label_font_family: string;
+  label_font_url: string | null;
+  show_legend: boolean;
+  legend_collapsed: boolean;
+  properties_panel: 'compact' | 'cards' | 'hidden';
+  selection_dimming: number;
+  hide_edges_on_move: boolean;
+}
+
+export interface LayoutConfig {
+  name: 'forceatlas2' | 'force' | 'circular' | 'circlepack' | 'grid' | 'concentric' | 'hierarchical' | 'random' | 'none';
+  iterations: number;
+  gravity: number;
+  scaling_ratio: number;
+  lin_log_mode: boolean;
+  strong_gravity_mode: boolean;
+  dynamic_after_drag: boolean;
+  drag_solver: 'force' | 'forceatlas2';
+  drag_relaxation_ms: number;
+  hierarchy_direction: 'TB' | 'BT' | 'LR' | 'RL';
+}
+
+export interface GraphConfig {
+  display: DisplayConfig;
+  layout: LayoutConfig;
 }
 
 export interface StreamlitComponentArgs {
-  graphData?: Neo4jGraphData;
+  graphData?: PropertyGraphData;
   height?: number;
+  theme?: 'streamlit' | 'humanistic';
+  config?: GraphConfig;
 }
 
 export interface NodeInfo {
