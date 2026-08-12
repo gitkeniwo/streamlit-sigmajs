@@ -47,13 +47,17 @@ export const convertPropertyGraphToGraph = (
                   node.properties.label || 
                   node.properties.title ||
                   `Node ${primaryLabel}`;
+    const configuredX = Number(node.properties.x);
+    const configuredY = Number(node.properties.y);
 
     graph.addNode(nodeId, {
-      x: Math.random() * 10 - 5, // Random initial position
-      y: Math.random() * 10 - 5,
+      x: Number.isFinite(configuredX) ? configuredX : Math.random() * 10 - 5,
+      y: Number.isFinite(configuredY) ? configuredY : Math.random() * 10 - 5,
       size: size,
       label: label,
       color: color,
+      borderColor: color,
+      type: 'border',
       labels: node.labels,
       properties: node.properties,
       baseSize: size,
@@ -70,10 +74,7 @@ export const convertPropertyGraphToGraph = (
     if (graph.hasNode(sourceId) && graph.hasNode(targetId)) {
       const edgeId = relationship.id;
       
-      const addEdge = relationship.directed
-        ? graph.addDirectedEdge.bind(graph)
-        : graph.addUndirectedEdge.bind(graph);
-      addEdge(sourceId, targetId, {
+      const attributes = {
         id: edgeId,
         size: 2,
         color: defaultEdgeColor,
@@ -86,7 +87,12 @@ export const convertPropertyGraphToGraph = (
 
         baseColor: defaultEdgeColor,
         baseSize: 2,
-      });
+      };
+      if (relationship.directed) {
+        graph.addDirectedEdgeWithKey(edgeId, sourceId, targetId, attributes);
+      } else {
+        graph.addUndirectedEdgeWithKey(edgeId, sourceId, targetId, attributes);
+      }
     }
   });
 

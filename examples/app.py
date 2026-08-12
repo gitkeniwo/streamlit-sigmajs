@@ -7,7 +7,7 @@ from typing import Any
 import streamlit as st
 
 from example_graphs import EXAMPLES, supply_chain
-from st_sigma import normalize_graph, sigma_graph
+from st_sigma import DisplayConfig, GraphConfig, LayoutConfig, normalize_graph, sigma_graph
 
 
 st.set_page_config(
@@ -27,6 +27,7 @@ def render_graph(
     key: str,
     height: int = 500,
     theme: str = "streamlit",
+    config: GraphConfig | None = None,
 ):
     graph, edges = split_input(value)
     return sigma_graph(
@@ -34,6 +35,7 @@ def render_graph(
         edges=edges,
         height=height,
         theme=theme,
+        config=config,
         key=key,
     )
 
@@ -131,10 +133,64 @@ else:
             key="playground-theme",
         )
         height = st.slider("Canvas height", 400, 900, 650, 50)
+        properties_panel = st.selectbox(
+            "Properties panel",
+            ["compact", "cards", "hidden"],
+        )
+        layout_name = st.selectbox(
+            "Layout",
+            ["forceatlas2", "circular", "random", "none"],
+        )
+        dynamic_after_drag = st.checkbox(
+            "Relax layout while dragging",
+            value=False,
+            disabled=layout_name != "forceatlas2",
+            help="Keeps the dragged node fixed while nearby nodes settle in a worker.",
+        )
+        with st.expander("Labels and overlays"):
+            node_labels = st.selectbox(
+                "Node labels",
+                ["auto", "hover", "hidden"],
+            )
+            edge_labels = st.selectbox(
+                "Edge labels",
+                ["hover", "hidden", "always"],
+            )
+            node_label_size = st.slider("Node label size", 8, 22, 12)
+            edge_label_size = st.slider("Edge label size", 7, 18, 9)
+            show_legend = st.checkbox("Show legend", value=True)
+            legend_collapsed = st.checkbox(
+                "Start legend collapsed",
+                value=True,
+                disabled=not show_legend,
+            )
+            selection_dimming = st.slider(
+                "Selection dimming",
+                0.0,
+                0.9,
+                0.68,
+                0.05,
+            )
 
     input_format, description, build_graph = EXAMPLES[example_name]
     value = build_graph()
     metrics = graph_metrics(value)
+    playground_config = GraphConfig(
+        display=DisplayConfig(
+            node_labels=node_labels,
+            edge_labels=edge_labels,
+            node_label_size=node_label_size,
+            edge_label_size=edge_label_size,
+            show_legend=show_legend,
+            legend_collapsed=legend_collapsed,
+            properties_panel=properties_panel,
+            selection_dimming=selection_dimming,
+        ),
+        layout=LayoutConfig(
+            name=layout_name,
+            dynamic_after_drag=dynamic_after_drag and layout_name == "forceatlas2",
+        ),
+    )
     with canvas:
         st.markdown(f"#### {example_name}")
         st.caption(
@@ -147,6 +203,7 @@ else:
             key=f"playground-{example_name}",
             height=height,
             theme=theme or "streamlit",
+            config=playground_config,
         )
 
     with st.expander("Inspect normalized component input"):

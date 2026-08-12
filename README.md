@@ -18,8 +18,10 @@ property-graph dictionary directly from Python.
 - [x] Streamlit-native and humanistic themes
 - [x] In-component node and edge selection
 - [x] Multiple independent graphs on one Streamlit page
+- [x] ForceAtlas2, circular, random, and pre-positioned layouts
+- [x] Compact/card property inspectors and configurable labels/legend
+- [x] Optional worker-based layout relaxation while dragging
 - [ ] Python interaction callbacks
-- [ ] Graph layouts
 
 ## Local Installation
 
@@ -154,3 +156,42 @@ sigma_graph(graph)
 `theme="streamlit"` is the default and follows the host app's theme variables.
 Use `theme="humanistic"` for the original warm, low-saturation visual style.
 The v0.1 `st_sigmagraph(graphData=...)` API remains available for compatibility.
+
+### Display and layout configuration
+
+The default presentation uses a compact properties panel, a collapsed legend,
+automatic node labels, and edge labels shown only on hover. Advanced options
+are grouped so the main function stays small:
+
+```python
+from st_sigma import DisplayConfig, GraphConfig, LayoutConfig, sigma_graph
+
+config = GraphConfig(
+    display=DisplayConfig(
+        node_labels="hover",       # "auto" | "hover" | "hidden"
+        edge_labels="hidden",      # "always" | "hover" | "hidden"
+        node_label_size=11,
+        edge_label_size=8,
+        properties_panel="compact",  # "compact" | "cards" | "hidden"
+        show_legend=True,
+        legend_collapsed=True,
+        selection_dimming=0.68,
+    ),
+    layout=LayoutConfig(
+        name="forceatlas2",        # "circular" | "random" | "none"
+        iterations=120,
+        gravity=1.0,
+        scaling_ratio=12.0,
+        dynamic_after_drag=True,
+        drag_relaxation_ms=700,
+    ),
+)
+
+sigma_graph(graph, config=config)
+```
+
+For a layout preset without custom settings, use the shorter form:
+
+```python
+sigma_graph(graph, layout="circular")
+```

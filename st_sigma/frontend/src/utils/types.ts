@@ -18,10 +18,41 @@ export interface PropertyGraphData {
   edges: PropertyGraphEdge[];
 }
 
+export interface DisplayConfig {
+  node_labels: 'auto' | 'hover' | 'hidden';
+  edge_labels: 'always' | 'hover' | 'hidden';
+  node_label_size: number;
+  edge_label_size: number;
+  label_density: number;
+  label_rendered_size_threshold: number;
+  show_legend: boolean;
+  legend_collapsed: boolean;
+  properties_panel: 'compact' | 'cards' | 'hidden';
+  selection_dimming: number;
+  hide_edges_on_move: boolean;
+}
+
+export interface LayoutConfig {
+  name: 'forceatlas2' | 'circular' | 'random' | 'none';
+  iterations: number;
+  gravity: number;
+  scaling_ratio: number;
+  lin_log_mode: boolean;
+  strong_gravity_mode: boolean;
+  dynamic_after_drag: boolean;
+  drag_relaxation_ms: number;
+}
+
+export interface GraphConfig {
+  display: DisplayConfig;
+  layout: LayoutConfig;
+}
+
 export interface StreamlitComponentArgs {
   graphData?: PropertyGraphData;
   height?: number;
   theme?: 'streamlit' | 'humanistic';
+  config?: GraphConfig;
 }
 
 export interface NodeInfo {

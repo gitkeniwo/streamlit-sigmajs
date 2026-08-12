@@ -1,4 +1,6 @@
 from pathlib import Path
+from dataclasses import asdict
+from typing import Any, Literal
 
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
@@ -12,11 +14,15 @@ from .adapters import (
     serialize_value,
 )
 from .schema import PropertyGraph, PropertyGraphEdge, PropertyGraphNode
+from .config import DisplayConfig, GraphConfig, LayoutConfig, resolve_config
 
 __all__ = [
     "PropertyGraph",
     "PropertyGraphEdge",
     "PropertyGraphNode",
+    "DisplayConfig",
+    "GraphConfig",
+    "LayoutConfig",
     "from_dataframes",
     "from_mapping",
     "from_neo4j",
@@ -89,7 +95,16 @@ def neo4jgraph_to_sigma(result):
     }
 
 
-def sigma_graph(graph, *, edges=None, height=600, theme="streamlit", key=None):
+def sigma_graph(
+    graph: object,
+    *,
+    edges: object | None = None,
+    height: int = 600,
+    theme: Literal["streamlit", "humanistic"] = "streamlit",
+    layout: str | LayoutConfig | None = None,
+    config: GraphConfig | None = None,
+    key: str | None = None,
+) -> Any:
     """Render a supported graph value without a manual conversion step.
 
     ``graph`` may be a canonical or legacy graph dictionary, a NetworkX graph,
@@ -98,9 +113,15 @@ def sigma_graph(graph, *, edges=None, height=600, theme="streamlit", key=None):
     if theme not in {"streamlit", "humanistic"}:
         raise ValueError("theme must be 'streamlit' or 'humanistic'.")
     graph_data = normalize_graph(graph, edges=edges)
+    resolved_config = resolve_config(config, layout)
     return _component_func(
         key=key,
-        data={"graphData": graph_data, "height": height, "theme": theme},
+        data={
+            "graphData": graph_data,
+            "height": height,
+            "theme": theme,
+            "config": asdict(resolved_config),
+        },
     )
 
 def st_sigmagraph(graphData=None, height=600, theme="humanistic", key=None):

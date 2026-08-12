@@ -93,11 +93,12 @@ const PropertiesGroup: React.FC<PropertiesGroupProps> = ({ properties }) => {
 export interface PropertiesPanelProps {
   selectedNode: NodeInfo;
   onClose: () => void;
+  mode?: 'compact' | 'cards';
 }
 
-const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ selectedNode, onClose }) => {
+const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ selectedNode, onClose, mode = 'compact' }) => {
   return (
-    <div className="properties-panel">
+    <div className={`properties-panel properties-panel--${mode}`}>
       <div className="properties-header">
         <h3>Node Properties</h3>
         <button className="close-button" onClick={onClose}>

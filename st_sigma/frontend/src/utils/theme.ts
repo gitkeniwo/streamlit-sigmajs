@@ -7,6 +7,7 @@ export interface GraphThemeTokens {
   edgeMuted: string;
   selected: string;
   text: string;
+  background: string;
 }
 
 const THEMES: Record<ThemeName, GraphThemeTokens> = {
@@ -17,6 +18,7 @@ const THEMES: Record<ThemeName, GraphThemeTokens> = {
     edgeMuted: '#d5d8e2',
     selected: '#ff4b4b',
     text: '#31333f',
+    background: '#ffffff',
   },
   humanistic: {
     palette: ['#CC8B65', '#B4846C', '#8B9D83', '#D4A574', '#9B8579', '#C99A6E', '#A8968D', '#B89B88', '#7D8B7F', '#D4B59E', '#8E7968', '#9FA89A'],
@@ -25,8 +27,8 @@ const THEMES: Record<ThemeName, GraphThemeTokens> = {
     edgeMuted: '#e8e3d8',
     selected: '#CC8B65',
     text: '#4a4137',
+    background: '#fdfcfb',
   },
 };
 
 export const getThemeTokens = (theme: ThemeName): GraphThemeTokens => THEMES[theme];
-

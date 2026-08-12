@@ -4,7 +4,15 @@ import networkx as nx
 import pandas as pd
 import pytest
 
-from st_sigma import from_dataframes, from_mapping, from_networkx, normalize_graph
+from st_sigma import (
+    DisplayConfig,
+    GraphConfig,
+    LayoutConfig,
+    from_dataframes,
+    from_mapping,
+    from_networkx,
+    normalize_graph,
+)
 
 
 def test_mapping_normalizes_legacy_and_canonical_fields():
@@ -81,3 +89,49 @@ def test_sigma_graph_passes_normalized_data_and_theme(monkeypatch):
     assert result["key"] == "graph"
     assert result["data"]["theme"] == "humanistic"
     assert result["data"]["graphData"]["nodes"][0]["labels"] == ["Person"]
+    assert result["data"]["config"]["display"]["edge_labels"] == "hover"
+    assert result["data"]["config"]["display"]["properties_panel"] == "compact"
+
+
+def test_sigma_graph_serializes_advanced_display_and_layout_config(monkeypatch):
+    import st_sigma
+
+    monkeypatch.setattr(st_sigma, "_component_func", lambda **kwargs: kwargs)
+    config = GraphConfig(
+        display=DisplayConfig(
+            node_labels="hover",
+            edge_labels="hidden",
+            properties_panel="cards",
+            show_legend=False,
+        ),
+        layout=LayoutConfig(
+            name="circular",
+            iterations=42,
+            dynamic_after_drag=True,
+        ),
+    )
+
+    result = st_sigma.sigma_graph(
+        {"nodes": [], "edges": []},
+        config=config,
+        layout="random",
+    )
+
+    assert result["data"]["config"]["display"]["node_labels"] == "hover"
+    assert result["data"]["config"]["display"]["show_legend"] is False
+    assert result["data"]["config"]["layout"]["name"] == "random"
+    assert result["data"]["config"]["layout"]["iterations"] == 42
+
+
+@pytest.mark.parametrize(
+    ("factory", "message"),
+    [
+        (lambda: DisplayConfig(edge_labels="sometimes"), "edge_labels"),
+        (lambda: DisplayConfig(selection_dimming=2), "selection_dimming"),
+        (lambda: LayoutConfig(name="grid"), "layout name"),
+        (lambda: LayoutConfig(drag_relaxation_ms=-1), "drag_relaxation_ms"),
+    ],
+)
+def test_config_validation_explains_invalid_values(factory, message):
+    with pytest.raises(ValueError, match=message):
+        factory()

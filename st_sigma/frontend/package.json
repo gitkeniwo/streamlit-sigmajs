@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "dependencies": {
+    "@sigma/node-border": "^3.0.0",
     "@streamlit/component-v2-lib": "^0.2.0",
     "graphology": "^0.26.0",
     "graphology-layout": "^0.6.1",

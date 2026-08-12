@@ -1,12 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Graph from 'graphology';
 import forceAtlas2 from 'graphology-layout-forceatlas2';
+import FA2LayoutSupervisor from 'graphology-layout-forceatlas2/worker';
+import { circular, random } from 'graphology-layout';
 import Sigma from 'sigma';
+import { NodeBorderProgram } from '@sigma/node-border';
 
 import LegendPanel, { NodeType, RelationshipType } from './LegendPanel';
 import PropertiesPanel, { NodeInfo } from './PropertiesPanel';
 import RelationshipPropertiesPanel, { EdgeInfo } from './RelationshipPropertiesPanel';
-import { StreamlitComponentArgs } from '../utils/types';
+import { GraphConfig, StreamlitComponentArgs } from '../utils/types';
 import {
   convertPropertyGraphToGraph,
   extractUniqueLabels,
@@ -21,8 +24,49 @@ interface InteractiveGraphProps {
   args: StreamlitComponentArgs;
 }
 
-const withOpacity = (color: string, opacity: string): string => {
-  return /^#[0-9a-f]{6}$/i.test(color) ? `${color}${opacity}` : color;
+const DEFAULT_CONFIG: GraphConfig = {
+  display: {
+    node_labels: 'auto',
+    edge_labels: 'hover',
+    node_label_size: 12,
+    edge_label_size: 9,
+    label_density: 0.8,
+    label_rendered_size_threshold: 6,
+    show_legend: true,
+    legend_collapsed: true,
+    properties_panel: 'compact',
+    selection_dimming: 0.68,
+    hide_edges_on_move: false,
+  },
+  layout: {
+    name: 'forceatlas2',
+    iterations: 100,
+    gravity: 1,
+    scaling_ratio: 10,
+    lin_log_mode: false,
+    strong_gravity_mode: false,
+    dynamic_after_drag: false,
+    drag_relaxation_ms: 700,
+  },
+};
+
+const colorToNumber = (color: string): number | null => {
+  const hex = /^#([0-9a-f]{6})$/i.exec(color);
+  if (hex) return Number.parseInt(hex[1], 16);
+  const rgb = /^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i.exec(color);
+  if (!rgb) return null;
+  return (Number(rgb[1]) << 16) + (Number(rgb[2]) << 8) + Number(rgb[3]);
+};
+
+const mixColors = (foreground: string, background: string, amount: number): string => {
+  const from = colorToNumber(foreground);
+  const to = colorToNumber(background);
+  if (from === null || to === null) return foreground;
+
+  const channel = (shift: number) => Math.round(
+    ((from >> shift) & 255) * (1 - amount) + ((to >> shift) & 255) * amount,
+  );
+  return `#${[16, 8, 0].map((shift) => channel(shift).toString(16).padStart(2, '0')).join('')}`;
 };
 
 const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
@@ -48,10 +92,14 @@ const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
   const componentHeight = args.height || 600;
   const themeName = args.theme || 'streamlit';
   const theme = getThemeTokens(themeName);
+  const config = args.config || DEFAULT_CONFIG;
+  const displayConfig = config.display;
+  const layoutConfig = config.layout;
 
   const stableGraphData = useMemo(() => {
     return graphData ? JSON.stringify(graphData) : null;
   }, [graphData]);
+  const stableConfig = useMemo(() => JSON.stringify(config), [config]);
 
   const refresh = () => sigmaRef.current?.refresh();
 
@@ -114,53 +162,105 @@ const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
       theme.edge,
     );
     graphRef.current = graph;
+    const renderedBackground = getComputedStyle(containerRef.current).backgroundColor;
 
-    forceAtlas2.assign(graph, {
-      iterations: 100,
-      settings: {
-        gravity: 1,
-        scalingRatio: 10,
-      },
-    });
+    const forceAtlasSettings = {
+      gravity: layoutConfig.gravity,
+      scalingRatio: layoutConfig.scaling_ratio,
+      linLogMode: layoutConfig.lin_log_mode,
+      strongGravityMode: layoutConfig.strong_gravity_mode,
+    };
+
+    if (layoutConfig.name === 'circular') {
+      circular.assign(graph);
+    } else if (layoutConfig.name === 'random') {
+      random.assign(graph);
+    } else if (layoutConfig.name === 'forceatlas2' && layoutConfig.iterations > 0) {
+      forceAtlas2.assign(graph, {
+        iterations: layoutConfig.iterations,
+        settings: forceAtlasSettings,
+      });
+    }
 
     const sigma = new Sigma(graph, containerRef.current, {
+      nodeProgramClasses: { border: NodeBorderProgram },
       defaultEdgeColor: theme.edge,
       defaultNodeColor: theme.node,
       labelColor: { color: theme.text },
-      labelSize: 14,
+      labelSize: displayConfig.node_label_size,
       labelWeight: '500',
-      renderEdgeLabels: true,
+      edgeLabelSize: displayConfig.edge_label_size,
+      labelDensity: displayConfig.label_density,
+      labelRenderedSizeThreshold: displayConfig.label_rendered_size_threshold,
+      renderLabels: displayConfig.node_labels !== 'hidden',
+      renderEdgeLabels: displayConfig.edge_labels !== 'hidden',
+      hideEdgesOnMove: displayConfig.hide_edges_on_move,
       enableEdgeEvents: true,
       nodeReducer: (node, data) => {
         const baseSize = data.baseSize ?? data.size;
         const baseColor = data.baseColor ?? data.color;
-        const displayData = {
+        const displayData: Record<string, any> = {
           ...data,
           size: baseSize,
           color: baseColor,
+          borderColor: data.borderColor ?? baseColor,
+          type: 'border',
           highlighted: false,
         };
 
         const selectedNodeId = selectedNodeIdRef.current;
         if (selectedNodeId) {
           if (node === selectedNodeId) {
-            displayData.size = baseSize * 1.3;
-            displayData.highlighted = true;
+            displayData.size = baseSize * 1.06;
+            displayData.borderColor = theme.selected;
           } else if (!selectedNodeNeighborsRef.current.has(node)) {
-            displayData.color = withOpacity(baseColor, '40');
+            displayData.color = mixColors(
+              baseColor,
+              renderedBackground || theme.background,
+              displayConfig.selection_dimming,
+            );
+            displayData.borderColor = mixColors(
+              baseColor,
+              renderedBackground || theme.background,
+              displayConfig.selection_dimming * 0.42,
+            );
           }
         }
 
-        if (selectedEdgeNodesRef.current.has(node)) {
-          displayData.size = baseSize * 1.3;
+        if (selectedEdgeIdRef.current) {
+          if (selectedEdgeNodesRef.current.has(node)) {
+            displayData.size = baseSize * 1.04;
+            displayData.borderColor = theme.selected;
+          } else {
+            displayData.color = mixColors(
+              baseColor,
+              renderedBackground || theme.background,
+              displayConfig.selection_dimming,
+            );
+            displayData.borderColor = mixColors(
+              baseColor,
+              renderedBackground || theme.background,
+              displayConfig.selection_dimming * 0.42,
+            );
+          }
         }
 
         if (hoveredNodeRef.current === node) {
-          displayData.size = baseSize * (node === selectedNodeId ? 1.5 : 1.2);
+          displayData.size = baseSize * 1.08;
+          displayData.borderColor = theme.selected;
         }
 
         if (draggedNodeRef.current === node) {
-          displayData.highlighted = true;
+          displayData.borderColor = theme.selected;
+        }
+
+        if (displayConfig.node_labels === 'hidden') {
+          displayData.label = null;
+        } else if (displayConfig.node_labels === 'hover') {
+          const showLabel = hoveredNodeRef.current === node
+            || selectedNodeId === node
+            || selectedEdgeNodesRef.current.has(node);
+          displayData.label = showLabel ? data.label : null;
         }
 
         return displayData;
@@ -168,7 +268,7 @@ const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
       edgeReducer: (edge, data) => {
         const baseSize = data.baseSize ?? data.size;
         const baseColor = data.baseColor ?? data.color;
-        const displayData = {
+        const displayData: Record<string, any> = {
           ...data,
           size: baseSize,
           color: baseColor,
@@ -179,19 +279,33 @@ const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
           const [source, target] = graph.extremities(edge);
           if (source === selectedNodeId || target === selectedNodeId) {
             displayData.color = graph.getNodeAttribute(selectedNodeId, 'baseColor');
-            displayData.size = 3;
+            displayData.size = baseSize * 1.5;
           } else {
             displayData.color = theme.edgeMuted;
+            displayData.size = baseSize * 0.72;
           }
         }
 
-        if (selectedEdgeIdRef.current === edge) {
-          displayData.color = theme.selected;
-          displayData.size = 4;
+        const selectedEdgeId = selectedEdgeIdRef.current;
+        if (selectedEdgeId) {
+          if (selectedEdgeId === edge) {
+            displayData.color = theme.selected;
+            displayData.size = baseSize * 1.8;
+          } else {
+            displayData.color = theme.edgeMuted;
+            displayData.size = baseSize * 0.72;
+          }
         }
 
         if (hoveredEdgeRef.current === edge) {
-          displayData.size *= 1.5;
+          displayData.size *= 1.2;
+        }
+
+        if (displayConfig.edge_labels === 'hidden') {
+          displayData.label = null;
+        } else if (displayConfig.edge_labels === 'hover') {
+          const showLabel = hoveredEdgeRef.current === edge || selectedEdgeId === edge;
+          displayData.label = showLabel ? data.label : null;
         }
 
         return displayData;
@@ -199,10 +313,63 @@ const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
     });
     sigmaRef.current = sigma;
 
+    let dynamicLayout: FA2LayoutSupervisor | null = null;
+    let relaxationTimer: ReturnType<typeof setTimeout> | null = null;
+    let fixedLayoutNode: string | null = null;
+    let draggedPosition: { x: number; y: number } | null = null;
+
+    const stopDynamicLayout = () => {
+      if (relaxationTimer) clearTimeout(relaxationTimer);
+      relaxationTimer = null;
+      dynamicLayout?.stop();
+      dynamicLayout?.kill();
+      dynamicLayout = null;
+      if (fixedLayoutNode && graph.hasNode(fixedLayoutNode)) {
+        graph.removeNodeAttribute(fixedLayoutNode, 'fixed');
+      }
+      fixedLayoutNode = null;
+      draggedPosition = null;
+    };
+
+    const startDynamicLayout = (node: string) => {
+      if (!layoutConfig.dynamic_after_drag || layoutConfig.name !== 'forceatlas2') return;
+      stopDynamicLayout();
+      fixedLayoutNode = node;
+      draggedPosition = {
+        x: graph.getNodeAttribute(node, 'x'),
+        y: graph.getNodeAttribute(node, 'y'),
+      };
+      graph.setNodeAttribute(node, 'fixed', true);
+      dynamicLayout = new FA2LayoutSupervisor(graph, {
+        settings: { ...forceAtlasSettings, slowDown: 5 },
+        outputReducer: (key, attributes) => {
+          if (key === fixedLayoutNode && draggedPosition) {
+            return { ...attributes, ...draggedPosition };
+          }
+          return attributes;
+        },
+      });
+      dynamicLayout.start();
+    };
+
+    const finishDragging = () => {
+      isDraggingRef.current = false;
+      draggedNodeRef.current = null;
+      document.body.style.cursor = 'default';
+      if (dynamicLayout) {
+        relaxationTimer = setTimeout(
+          stopDynamicLayout,
+          layoutConfig.drag_relaxation_ms,
+        );
+      }
+      sigma.refresh();
+    };
+
     sigma.on('downNode', ({ node }) => {
       isDraggingRef.current = true;
       draggedNodeRef.current = node;
       document.body.style.cursor = 'grabbing';
+      startDynamicLayout(node);
       sigma.refresh();
     });
 
@@ -210,6 +377,7 @@ const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
       if (!isDraggingRef.current || !draggedNodeRef.current) return;
 
       const position = sigma.viewportToGraph(event);
+      draggedPosition = position;
       graph.setNodeAttribute(draggedNodeRef.current, 'x', position.x);
       graph.setNodeAttribute(draggedNodeRef.current, 'y', position.y);
 
@@ -218,17 +386,13 @@ const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
       event.original.stopPropagation();
     });
 
-    sigma.getMouseCaptor().on('mouseup', () => {
-      isDraggingRef.current = false;
-      draggedNodeRef.current = null;
-      document.body.style.cursor = 'default';
-      sigma.refresh();
-    });
+    sigma.getMouseCaptor().on('mouseup', finishDragging);
 
     sigma.getTouchCaptor().on('touchmove', (event) => {
       if (!isDraggingRef.current || !draggedNodeRef.current) return;
 
       const position = sigma.viewportToGraph(event.touches[0]);
+      draggedPosition = position;
       graph.setNodeAttribute(draggedNodeRef.current, 'x', position.x);
       graph.setNodeAttribute(draggedNodeRef.current, 'y', position.y);
 
@@ -236,6 +400,7 @@ const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
       event.original.preventDefault();
       event.original.stopPropagation();
     });
+    sigma.getTouchCaptor().on('touchup', finishDragging);
 
     sigma.on('clickNode', ({ node }) => {
       if (isDraggingRef.current) return;
@@ -312,12 +477,13 @@ const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
     });
 
     return () => {
+      stopDynamicLayout();
       sigma.kill();
       sigmaRef.current = null;
       graphRef.current = null;
       document.body.style.cursor = 'default';
     };
-  }, [stableGraphData, themeName]);
+  }, [stableGraphData, stableConfig, themeName]);
 
   if (!graphData) {
     return (
@@ -339,24 +505,29 @@ const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
           style={{ width: '100%', height: `${componentHeight}px` }}
         />
 
-        <LegendPanel
-          nodeTypes={nodeTypes}
-          relationshipTypes={relationshipTypes}
-          graphOrder={graphRef.current?.order || 0}
-          graphSize={graphRef.current?.size || 0}
-        />
-
-        {selectedNode && (
-          <PropertiesPanel
-            selectedNode={selectedNode}
-            onClose={clearSelectedNode}
+        {displayConfig.show_legend && (
+          <LegendPanel
+            nodeTypes={nodeTypes}
+            relationshipTypes={relationshipTypes}
+            graphOrder={graphRef.current?.order || 0}
+            graphSize={graphRef.current?.size || 0}
+            initiallyCollapsed={displayConfig.legend_collapsed}
           />
         )}
 
-        {selectedEdge && (
+        {selectedNode && displayConfig.properties_panel !== 'hidden' && (
+          <PropertiesPanel
+            selectedNode={selectedNode}
+            onClose={clearSelectedNode}
+            mode={displayConfig.properties_panel}
+          />
+        )}
+
+        {selectedEdge && displayConfig.properties_panel !== 'hidden' && (
           <RelationshipPropertiesPanel
             selectedEdge={selectedEdge}
             onClose={clearSelectedEdge}
+            mode={displayConfig.properties_panel}
           />
         )}
       </div>

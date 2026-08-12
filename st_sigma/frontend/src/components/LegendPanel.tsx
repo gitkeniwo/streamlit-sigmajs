@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 export interface NodeType {
   type: string;
@@ -16,25 +16,36 @@ export interface LegendPanelProps {
   relationshipTypes: RelationshipType[];
   graphOrder: number;
   graphSize: number;
+  initiallyCollapsed?: boolean;
 }
 
 const LegendPanel: React.FC<LegendPanelProps> = ({ 
   nodeTypes, 
   relationshipTypes,
   graphOrder, 
-  graphSize 
+  graphSize,
+  initiallyCollapsed = true,
 }) => {
-  const [visible, setVisible] = useState(false);
+  const [visible, setVisible] = useState(!initiallyCollapsed);
+
+  useEffect(() => {
+    setVisible(!initiallyCollapsed);
+  }, [initiallyCollapsed]);
 
   const toggleVisibility = () => {
     setVisible(prevVisible => !prevVisible);
   };
 
   return (
-    <div className="legend-panel">
+    <div className={`legend-panel ${visible ? 'is-expanded' : 'is-collapsed'}`}>
       <div className="legend-header">
         <h3>Legend</h3>
-        <button onClick={toggleVisibility} className="legend-toggle-button">
+        <button
+          onClick={toggleVisibility}
+          className="legend-toggle-button"
+          aria-label={visible ? 'Collapse legend' : 'Expand legend'}
+          title={visible ? 'Collapse legend' : 'Expand legend'}
+        >
           {visible ? '−' : '+'}
         </button>
       </div>
