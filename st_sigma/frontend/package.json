@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "dependencies": {
+    "@streamlit/component-v2-lib": "^0.2.0",
     "graphology": "^0.26.0",
     "graphology-layout": "^0.6.1",
     "graphology-layout-force": "^0.2.4",
@@ -11,8 +12,7 @@
     "graphology-types": "^0.24.8",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "sigma": "^3.0.2",
-    "streamlit-component-lib": "^2.0.0"
+    "sigma": "^3.0.2"
   },
   "scripts": {
     "start": "vite",

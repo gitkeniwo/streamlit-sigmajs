@@ -1,0 +1,7 @@
+[project]
+name = "streamlit-sigmajs"
+version = "0.1.2"
+
+[[tool.streamlit.component.components]]
+name = "sigma_graph"
+asset_dir = "frontend/build"

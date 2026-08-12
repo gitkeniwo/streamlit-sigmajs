@@ -1,4 +1,5 @@
 from datetime import date
+from pathlib import Path
 
 from st_sigma import neo4jgraph_to_sigma, serialize_neo4j_value
 
@@ -77,3 +78,14 @@ def test_neo4j_conversion_uses_structural_objects_not_neo4j_imports():
             }
         ],
     }
+
+
+def test_component_v2_manifest_and_assets_are_packaged():
+    package_dir = Path(__file__).parents[1] / "st_sigma"
+    manifest = package_dir / "pyproject.toml"
+    build_dir = package_dir / "frontend" / "build"
+
+    assert manifest.is_file()
+    assert 'name = "sigma_graph"' in manifest.read_text(encoding="utf-8")
+    assert len(list(build_dir.glob("index-*.js"))) == 1
+    assert len(list(build_dir.glob("style-*.css"))) == 1

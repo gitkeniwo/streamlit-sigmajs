@@ -1,15 +1,29 @@
-import React, { StrictMode } from "react"
+import type { FrontendRenderer, FrontendState } from "@streamlit/component-v2-lib"
+import { StrictMode } from "react"
 import { createRoot } from "react-dom/client"
-import App from "./App"
+import InteractiveGraph from "./components/InteractiveGraph"
+import type { StreamlitComponentArgs } from "./utils/types"
+import "./App.css"
 
-const rootElement = document.getElementById("root")
+const renderSigmaGraph: FrontendRenderer<FrontendState, StreamlitComponentArgs> = ({
+  data,
+  parentElement,
+}) => {
+  const mountElement = document.createElement("div")
+  mountElement.className = "sigma-component-root"
+  parentElement.appendChild(mountElement)
 
-if (!rootElement) {
-  throw new Error("Root element not found")
+  const root = createRoot(mountElement)
+  root.render(
+    <StrictMode>
+      <InteractiveGraph args={data} />
+    </StrictMode>,
+  )
+
+  return () => {
+    root.unmount()
+    mountElement.remove()
+  }
 }
 
-createRoot(rootElement).render(
-  <StrictMode>
-    <App />
-  </StrictMode>
-)
+export default renderSigmaGraph

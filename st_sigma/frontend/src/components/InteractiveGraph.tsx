@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import Graph from 'graphology';
 import forceAtlas2 from 'graphology-layout-forceatlas2';
 import Sigma from 'sigma';
-import { Streamlit } from 'streamlit-component-lib';
 
 import LegendPanel, { NodeType, RelationshipType } from './LegendPanel';
 import PropertiesPanel, { NodeInfo } from './PropertiesPanel';
@@ -307,9 +306,6 @@ const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
       sigma.refresh();
     });
 
-    Streamlit.setComponentReady();
-    Streamlit.setFrameHeight(componentHeight + 200);
-
     return () => {
       sigma.kill();
       sigmaRef.current = null;
@@ -317,10 +313,6 @@ const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
       document.body.style.cursor = 'default';
     };
   }, [stableGraphData]);
-
-  useEffect(() => {
-    Streamlit.setFrameHeight(componentHeight + 100);
-  }, [componentHeight]);
 
   if (!graphData) {
     return (
