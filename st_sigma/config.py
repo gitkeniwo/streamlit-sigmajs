@@ -24,7 +24,58 @@ HierarchyDirection = Literal["TB", "BT", "LR", "RL"]
 
 @dataclass(frozen=True)
 class DisplayConfig:
-    """Controls labels, overlays, and selection rendering."""
+    """Configure labels, overlays, inspectors, and selection rendering.
+
+    Parameters
+    ----------
+    node_labels : {"auto", "hover", "hidden"}, default="auto"
+        Control node-label visibility. ``"auto"`` lets Sigma render labels
+        according to ``label_density`` and
+        ``label_rendered_size_threshold``. ``"hover"`` only shows a label
+        for a hovered or selected node, and ``"hidden"`` disables node
+        labels.
+    edge_labels : {"always", "hover", "hidden"}, default="hover"
+        Control relationship-label visibility. ``"hover"`` shows the label
+        for a hovered or selected edge.
+    node_label_size : int, default=12
+        Node-label font size in CSS pixels. Must be positive.
+    edge_label_size : int, default=9
+        Edge-label font size in CSS pixels. Must be positive.
+    label_density : float, default=0.8
+        Sigma label density from ``0`` to ``1``. Lower values reduce label
+        clutter when ``node_labels="auto"``.
+    label_rendered_size_threshold : float, default=6
+        Minimum rendered node size at which an automatic node label is
+        eligible to appear.
+    label_font_family : str, default=system font stack
+        CSS ``font-family`` value used by node labels, edge labels, and graph
+        overlays. Local fonts can be used without ``label_font_url``.
+    label_font_url : str or None, default=None
+        Optional URL of a CSS stylesheet that defines the requested font,
+        such as a Google Fonts stylesheet or a self-hosted ``@font-face``
+        file. This is a stylesheet URL, not a direct font-file URL.
+    show_legend : bool, default=True
+        Show the node-type and relationship-type legend.
+    legend_collapsed : bool, default=True
+        Start the legend in its compact collapsed state. Has no effect when
+        ``show_legend`` is false.
+    properties_panel : {"compact", "cards", "hidden"}, default="compact"
+        Choose the node and edge property inspector. ``"compact"`` uses a
+        dense key/value layout, ``"cards"`` gives each property more space,
+        and ``"hidden"`` disables the inspector.
+    selection_dimming : float, default=0.68
+        Strength used to fade unrelated nodes after selecting a node or edge.
+        ``0`` keeps their original colors; ``1`` blends them fully into the
+        graph background.
+    hide_edges_on_move : bool, default=False
+        Temporarily hide edges while the camera is panning or zooming. This
+        can improve responsiveness for larger graphs.
+
+    Notes
+    -----
+    ``DisplayConfig`` is immutable. Create a new instance when changing a
+    setting between Streamlit reruns.
+    """
 
     node_labels: NodeLabelMode = "auto"
     edge_labels: EdgeLabelMode = "hover"
@@ -61,7 +112,61 @@ class DisplayConfig:
 
 @dataclass(frozen=True)
 class LayoutConfig:
-    """Controls initial placement and optional post-drag relaxation."""
+    """Configure initial node placement and optional post-drag relaxation.
+
+    Parameters
+    ----------
+    name : str, default="forceatlas2"
+        Initial layout preset. Supported values are:
+
+        - ``"forceatlas2"``: ForceAtlas2 placement for general networks.
+        - ``"force"``: a simple force-directed layout suited to small graphs.
+        - ``"circular"``: place every node on one circle.
+        - ``"circlepack"``: pack nodes into circles grouped by primary label.
+        - ``"grid"``: place nodes on a regular grid.
+        - ``"concentric"``: place high-degree nodes near the center.
+        - ``"hierarchical"``: a layered Dagre layout.
+        - ``"random"``: assign random coordinates.
+        - ``"none"``: preserve node ``x`` and ``y`` properties when supplied.
+
+    iterations : int, default=100
+        Number of synchronous iterations used by the initial
+        ``"forceatlas2"`` or ``"force"`` layout. ``0`` skips iterative
+        placement. This setting does not affect the other presets.
+    gravity : float, default=1.0
+        ForceAtlas2 gravity pulling disconnected regions toward the center.
+        Must be non-negative. Used by the initial ForceAtlas2 layout and by
+        post-drag relaxation when ``drag_solver="forceatlas2"``.
+    scaling_ratio : float, default=10.0
+        ForceAtlas2 repulsion scaling. Larger values generally spread nodes
+        farther apart. Must be positive.
+    lin_log_mode : bool, default=False
+        Enable ForceAtlas2 LinLog attraction, which can make clusters more
+        distinct.
+    strong_gravity_mode : bool, default=False
+        Enable ForceAtlas2 strong gravity to keep distant components closer
+        to the center.
+    dynamic_after_drag : bool, default=False
+        After a node is released, keep it at the dropped position while the
+        remaining nodes briefly settle around it.
+    drag_solver : {"force", "forceatlas2"}, default="force"
+        Solver used for post-drag relaxation. ``"force"`` gives a gentle,
+        interactive response for small and medium graphs.
+        ``"forceatlas2"`` runs in a worker and is suitable for larger graphs.
+    drag_relaxation_ms : int, default=1000
+        Duration of post-drag relaxation in milliseconds. ``0`` disables the
+        relaxation even when ``dynamic_after_drag`` is true.
+    hierarchy_direction : {"TB", "BT", "LR", "RL"}, default="TB"
+        Direction for the ``"hierarchical"`` layout: top-to-bottom,
+        bottom-to-top, left-to-right, or right-to-left. Ignored by other
+        layouts.
+
+    Notes
+    -----
+    Initial placement and post-drag relaxation are independent. For example,
+    a circular graph can still use the simple force solver after a node is
+    dragged.
+    """
 
     name: LayoutName = "forceatlas2"
     iterations: int = 100
@@ -101,7 +206,22 @@ class LayoutConfig:
 
 @dataclass(frozen=True)
 class GraphConfig:
-    """Advanced component configuration grouped by concern."""
+    """Group advanced settings for :func:`st_sigma.sigma_graph`.
+
+    Parameters
+    ----------
+    display : DisplayConfig, default=DisplayConfig()
+        Labels, overlays, inspectors, legend, and selection appearance.
+    layout : LayoutConfig, default=LayoutConfig()
+        Initial placement and post-drag layout behavior.
+
+    Examples
+    --------
+    >>> config = GraphConfig(
+    ...     display=DisplayConfig(edge_labels="hidden"),
+    ...     layout=LayoutConfig(name="circular"),
+    ... )
+    """
 
     display: DisplayConfig = field(default_factory=DisplayConfig)
     layout: LayoutConfig = field(default_factory=LayoutConfig)
@@ -111,6 +231,12 @@ def resolve_config(
     config: GraphConfig | None,
     layout: LayoutName | LayoutConfig | None,
 ) -> GraphConfig:
+    """Resolve the full configuration and an optional layout override.
+
+    A string ``layout`` replaces only ``config.layout.name``. Passing a
+    :class:`LayoutConfig` replaces the complete layout section. This helper is
+    mainly useful to wrappers around :func:`st_sigma.sigma_graph`.
+    """
     resolved = config or GraphConfig()
     if layout is None:
         return resolved

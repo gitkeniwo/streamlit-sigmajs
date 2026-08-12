@@ -105,10 +105,66 @@ def sigma_graph(
     config: GraphConfig | None = None,
     key: str | None = None,
 ) -> Any:
-    """Render a supported graph value without a manual conversion step.
+    """Render an interactive property graph in a Streamlit app.
 
-    ``graph`` may be a canonical or legacy graph dictionary, a NetworkX graph,
-    a Neo4j ``Graph`` result, or a node DataFrame when ``edges`` is provided.
+    Parameters
+    ----------
+    graph : object
+        Graph data in one of the supported forms:
+
+        - a canonical or legacy property-graph mapping;
+        - a NetworkX ``Graph``, ``DiGraph``, ``MultiGraph``, or
+          ``MultiDiGraph``;
+        - a ``neo4j.graph.Graph``-like value, including output produced with
+          ``result_transformer_=neo4j.Result.graph``;
+        - a pandas node DataFrame when ``edges`` is also supplied.
+
+        Inputs are normalized automatically; no adapter call is required.
+    edges : object or None, default=None
+        Edge DataFrame paired with a node DataFrame passed as ``graph``.
+        Nodes require an ``id`` column. Edges require ``source`` and
+        ``target`` columns. Do not set this argument for other graph types.
+    height : int, default=600
+        Graph canvas height in CSS pixels.
+    theme : {"streamlit", "humanistic"}, default="streamlit"
+        Visual theme. ``"streamlit"`` follows the host application's theme
+        variables. ``"humanistic"`` uses warm surfaces and a muted palette.
+    layout : str, LayoutConfig, or None, default=None
+        Convenient layout override. A preset string changes only
+        ``config.layout.name``; a :class:`LayoutConfig` replaces the entire
+        layout section. Supported preset names are ``"forceatlas2"``,
+        ``"force"``, ``"circular"``, ``"circlepack"``, ``"grid"``,
+        ``"concentric"``, ``"hierarchical"``, ``"random"``, and ``"none"``.
+    config : GraphConfig or None, default=None
+        Advanced display and layout configuration. Defaults to
+        :class:`GraphConfig` when omitted.
+    key : str or None, default=None
+        Stable Streamlit component key. Supply a unique key when rendering
+        multiple graphs or when the same graph survives application reruns.
+
+    Returns
+    -------
+    streamlit.components.v2.component.ComponentResult
+        Persistent Streamlit component state. The interaction-result surface
+        is reserved for future callback support.
+
+    Raises
+    ------
+    TypeError
+        If ``graph`` is unsupported or ``edges`` is used without DataFrames.
+    ValueError
+        If ``theme`` or a configuration option is invalid, or required graph
+        columns and identifiers are missing.
+
+    Examples
+    --------
+    >>> sigma_graph(graph, theme="streamlit", layout="forceatlas2", key="kg")  # doctest: +SKIP
+
+    See Also
+    --------
+    GraphConfig : Top-level advanced configuration.
+    DisplayConfig : Label, legend, inspector, and selection configuration.
+    LayoutConfig : Initial layout and post-drag relaxation configuration.
     """
     if theme not in {"streamlit", "humanistic"}:
         raise ValueError("theme must be 'streamlit' or 'humanistic'.")
@@ -125,7 +181,10 @@ def sigma_graph(
     )
 
 def st_sigmagraph(graphData=None, height=600, theme="humanistic", key=None):
-    """Render an interactive Sigma.js graph in a Streamlit app.
+    """Render a graph with the legacy v0.1 API.
+
+    New applications should use :func:`sigma_graph`, which accepts NetworkX,
+    Neo4j, DataFrames, and canonical property-graph mappings directly.
 
     Parameters
     ----------
@@ -134,6 +193,8 @@ def st_sigmagraph(graphData=None, height=600, theme="humanistic", key=None):
         :func:`neo4jgraph_to_sigma` to convert a Neo4j graph result.
     height: int
         Component height in pixels.
+    theme: {"streamlit", "humanistic"}
+        Visual theme. The compatibility default is ``"humanistic"``.
     key: str or None
         An optional key that uniquely identifies this component. If this is
         None, and the component's arguments are changed, the component will

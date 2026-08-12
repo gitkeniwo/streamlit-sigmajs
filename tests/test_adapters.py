@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import inspect
+from dataclasses import fields
+
 import networkx as nx
 import pandas as pd
 import pytest
@@ -145,3 +148,11 @@ def test_sigma_graph_serializes_advanced_display_and_layout_config(monkeypatch):
 def test_config_validation_explains_invalid_values(factory, message):
     with pytest.raises(ValueError, match=message):
         factory()
+
+
+@pytest.mark.parametrize("config_type", [DisplayConfig, LayoutConfig, GraphConfig])
+def test_config_docstrings_cover_every_public_field(config_type):
+    docstring = inspect.getdoc(config_type) or ""
+    missing = [field.name for field in fields(config_type) if field.name not in docstring]
+
+    assert missing == []
