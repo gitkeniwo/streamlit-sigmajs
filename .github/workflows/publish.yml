@@ -41,6 +41,13 @@ jobs:
       - name: Check package metadata
         run: uvx twine check dist/*
 
+      - name: Smoke-test the wheel
+        run: |
+          uv venv "${RUNNER_TEMP}/smoke-venv"
+          uv pip install --python "${RUNNER_TEMP}/smoke-venv/bin/python" dist/*.whl
+          cd "${RUNNER_TEMP}"
+          "${RUNNER_TEMP}/smoke-venv/bin/python" -c "import st_sigma; print(st_sigma.__file__)"
+
       - name: Upload distributions
         uses: actions/upload-artifact@v4
         with:

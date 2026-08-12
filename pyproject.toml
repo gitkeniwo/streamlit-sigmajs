@@ -29,6 +29,7 @@ examples = [
 Homepage = "https://github.com/gitkeniwo/streamlit-sigmajs"
 Repository = "https://github.com/gitkeniwo/streamlit-sigmajs"
 Issues = "https://github.com/gitkeniwo/streamlit-sigmajs/issues"
+Changelog = "https://github.com/gitkeniwo/streamlit-sigmajs/blob/main/CHANGELOG.md"
 
 
 [build-system]
