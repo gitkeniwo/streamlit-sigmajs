@@ -1,104 +1,131 @@
 # streamlit-sigmajs
 
+[![PyPI](https://img.shields.io/pypi/v/streamlit-sigmajs)](https://pypi.org/project/streamlit-sigmajs)
+[![Python](https://img.shields.io/pypi/pyversions/streamlit-sigmajs)](https://pypi.org/project/streamlit-sigmajs)
 [![GLWT](https://img.shields.io/badge/License-GLWT-pink)](https://github.com/gitkeniwo/streamlit-sigmajs/blob/main/LICENSE)
-[![pypi](https://img.shields.io/pypi/v/streamlit-sigmajs)](https://pypi.org/project/streamlit-sigmajs)
 
-A Streamlit component for interactive property graph visualization, powered by Sigma.js.
-Pass NetworkX graphs, Neo4j graph results, node/edge DataFrames, or a plain
-property-graph dictionary directly from Python.
+Interactive property-graph visualization for Streamlit, powered by
+[Sigma.js](https://www.sigmajs.org/). Pass a property-graph dictionary,
+NetworkX graph, Neo4j graph result, or pair of pandas DataFrames directly from
+Python.
 
-## Demo
-
-<img width="1448" height="988" alt="image" src="https://github.com/user-attachments/assets/7b82119a-70a5-4037-94e2-e461bfa8a923" />
+<img width="1448" height="988" alt="streamlit-sigmajs demo" src="https://github.com/user-attachments/assets/7b82119a-70a5-4037-94e2-e461bfa8a923" />
 
 ## Features
 
-- [x] Basic graph visualization
-- [x] NetworkX, Neo4j, DataFrame, and dictionary inputs
-- [x] Streamlit-native and humanistic themes
-- [x] In-component node and edge selection
-- [x] Multiple independent graphs on one Streamlit page
-- [x] ForceAtlas2, circular, random, and pre-positioned layouts
-- [x] Compact/card property inspectors and configurable labels/legend
-- [x] Optional worker-based layout relaxation while dragging
-- [ ] Python interaction callbacks
+- Direct NetworkX, Neo4j, DataFrame, and property-graph inputs
+- Streamlit-native and warm humanistic themes
+- Node and edge selection with compact property inspectors
+- Configurable labels, legend, colors, fonts, and interaction behavior
+- ForceAtlas2, force, circular, circlepack, grid, concentric, hierarchical,
+  random, and pre-positioned layouts
+- Optional post-drag relaxation: the dropped node stays in place while nearby
+  nodes settle
+- Multiple independent graphs on the same Streamlit page
 
-## Local Installation
+## Requirements
 
-Install the Python package and development dependencies:
+- Python 3.10 or newer
+- Streamlit 1.51 or newer
 
-```sh
-uv sync --extra dev
-```
+No JavaScript or frontend setup is required when installing the package from
+PyPI.
 
-To build your frontend code, run the following commands from the `st_sigma/frontend` directory:
+## Installation
 
-```sh
-npm ci
-npm run build
-```
-
-To run in development mode with hot-reloading, in the `st_sigma/frontend` directory, run:
-
-```sh
-npm ci
-npm run start
-```
-
-To start the repository example app, run:
-
-```sh
-uv run --extra examples streamlit run examples/app.py
-```
-
-The tracked gallery includes NetworkX, DataFrame, and synthetic property-graph
-examples. Materialized and third-party datasets are kept in the ignored
-`examples/data/` cache; see [`examples/README.md`](examples/README.md).
-
-## Install from PyPI
+With `uv`:
 
 ```sh
 uv add streamlit-sigmajs
 ```
 
-## Build and publish to PyPI
+With `pip`:
 
-1. Update the version in `pyproject.toml`.
-2. Build the frontend and Python distributions:
 ```sh
-cd st_sigma/frontend
-npm ci
-npm run build
-cd ../..
-uv build
-```
-3. Validate the distributions locally:
-```sh
-uvx twine check dist/*
+python -m pip install streamlit-sigmajs
 ```
 
-PyPI releases are published by the `publish` GitHub Actions workflow using
-[Trusted Publishing](https://docs.pypi.org/trusted-publishers/). Push a version
-tag such as `v0.1.2`, or manually dispatch the workflow for an existing tag.
-No PyPI API token is stored in GitHub.
+NetworkX, pandas, and the Neo4j driver are optional. Install only the library
+used by your application.
 
-## Usage
+## Quick start
 
-For NetworkX, pass the graph directly. Node attributes become properties;
-`label` or `labels` controls node types, and edge `type` controls relationship
-types.
+Create `app.py`:
 
 ```python
 import streamlit as st
+from st_sigma import sigma_graph
+
+st.title("Knowledge graph")
+
+graph = {
+    "nodes": [
+        {
+            "id": "ada",
+            "labels": ["Person"],
+            "properties": {"name": "Ada Lovelace", "born": 1815},
+        },
+        {
+            "id": "notes",
+            "labels": ["Work"],
+            "properties": {"name": "Notes on the Analytical Engine"},
+        },
+    ],
+    "edges": [
+        {
+            "id": "authored",
+            "source": "ada",
+            "target": "notes",
+            "type": "AUTHORED",
+            "properties": {"year": 1843},
+            "directed": True,
+        }
+    ],
+}
+
+sigma_graph(graph, height=600, key="knowledge-graph")
+```
+
+Run it with `uv`:
+
+```sh
+uv run streamlit run app.py
+```
+
+Or with `pip`:
+
+```sh
+streamlit run app.py
+```
+
+The default `streamlit` theme follows the host app's colors. Click a node or
+edge to inspect its properties, drag nodes to reposition them, and use the
+mouse wheel or trackpad to zoom.
+
+## Supported graph inputs
+
+### NetworkX
+
+Pass any NetworkX `Graph`, `DiGraph`, `MultiGraph`, or `MultiDiGraph`. Node
+attributes become properties. The `label` or `labels` attribute sets the node
+type, while an edge's `type` attribute sets its relationship type.
+
+```python
 import networkx as nx
 from st_sigma import sigma_graph
 
 graph = nx.karate_club_graph()
-sigma_graph(graph, height=600, theme="streamlit", key="karate")
+sigma_graph(graph, layout="forceatlas2", key="karate")
 ```
 
-For DataFrames, pass the node table as the first argument and the edge table
-with `edges=`. Nodes require `id`; edges require `source` and `target`.
+Install NetworkX with `uv add networkx` or `python -m pip install networkx`.
+
+### pandas DataFrames
+
+Pass the node DataFrame first and the edge DataFrame through `edges=`. Nodes
+require an `id` column; edges require `source` and `target`. The conventional
+optional columns are `label` or `labels` for nodes and `id`, `type`, and
+`directed` for edges. All remaining columns become properties.
 
 ```python
 import pandas as pd
@@ -106,23 +133,28 @@ from st_sigma import sigma_graph
 
 nodes = pd.DataFrame([
     {"id": "ada", "label": "Person", "name": "Ada Lovelace"},
-    {"id": "engine", "label": "Work", "name": "Analytical Engine Notes"},
+    {"id": "notes", "label": "Work", "name": "Analytical Engine Notes"},
 ])
 edges = pd.DataFrame([
-    {"id": "r1", "source": "ada", "target": "engine", "type": "AUTHORED"},
+    {"id": "r1", "source": "ada", "target": "notes", "type": "AUTHORED"},
 ])
-sigma_graph(nodes, edges=edges, theme="humanistic")
+
+sigma_graph(nodes, edges=edges, theme="humanistic", key="dataframes")
 ```
 
-Neo4j results returned with `neo4j.Result.graph` also work directly—no
-conversion helper is required:
+Install pandas with `uv add pandas` or `python -m pip install pandas`.
+
+### Neo4j
+
+`neo4j.Result.graph` output can be passed directly; no conversion helper is
+needed.
 
 ```python
 import neo4j
 from neo4j import GraphDatabase
 from st_sigma import sigma_graph
 
-with GraphDatabase.driver(NEO4J_URI, auth=AUTH) as driver:
+with GraphDatabase.driver(NEO4J_URI, auth=NEO4J_AUTH) as driver:
     graph = driver.execute_query(
         "MATCH (a)-[r]->(b) RETURN a, r, b LIMIT 100",
         result_transformer_=neo4j.Result.graph,
@@ -131,37 +163,66 @@ with GraphDatabase.driver(NEO4J_URI, auth=AUTH) as driver:
 sigma_graph(graph, height=650, key="neo4j")
 ```
 
-Plain dictionaries use one canonical property-graph schema:
+Install the driver with `uv add neo4j` or `python -m pip install neo4j`.
+
+### Property-graph dictionaries
+
+The canonical schema is:
 
 ```python
 graph = {
     "nodes": [
-        {"id": "ada", "labels": ["Person"], "properties": {"name": "Ada"}},
-        {"id": "engine", "labels": ["Work"], "properties": {"name": "Notes"}},
+        {
+            "id": "node-id",
+            "labels": ["NodeType"],
+            "properties": {"name": "Visible label", "any_key": "any value"},
+        }
     ],
     "edges": [
         {
-            "id": "r1",
-            "source": "ada",
-            "target": "engine",
-            "type": "AUTHORED",
-            "properties": {"year": 1843},
+            "id": "edge-id",
+            "source": "source-node-id",
+            "target": "target-node-id",
+            "type": "RELATIONSHIP_TYPE",
+            "properties": {},
             "directed": True,
-        },
+        }
     ],
 }
-sigma_graph(graph)
 ```
 
-`theme="streamlit"` is the default and follows the host app's theme variables.
-Use `theme="humanistic"` for the original warm, low-saturation visual style.
-The v0.1 `st_sigmagraph(graphData=...)` API remains available for compatibility.
+Legacy dictionaries using `identity`, `relationships`, `start`, and `end` are
+also normalized automatically.
 
-### Display and layout configuration
+## Themes and layouts
 
-The default presentation uses a compact properties panel, a collapsed legend,
-automatic node labels, and edge labels shown only on hover. Advanced options
-are grouped so the main function stays small:
+Use a preset for common cases:
+
+```python
+sigma_graph(graph, theme="humanistic", layout="circular")
+```
+
+Themes:
+
+- `streamlit` — neutral styling that follows Streamlit theme variables
+- `humanistic` — warm surfaces and a muted, low-saturation palette
+
+Layouts:
+
+- `forceatlas2`
+- `force`
+- `circular`
+- `circlepack`
+- `grid`
+- `concentric`
+- `hierarchical`
+- `random`
+- `none` — preserve supplied `x` and `y` node properties
+
+## Display and interaction configuration
+
+Most applications only need `sigma_graph(...)`. Use `GraphConfig` when more
+control is required:
 
 ```python
 from st_sigma import DisplayConfig, GraphConfig, LayoutConfig, sigma_graph
@@ -169,14 +230,9 @@ from st_sigma import DisplayConfig, GraphConfig, LayoutConfig, sigma_graph
 config = GraphConfig(
     display=DisplayConfig(
         node_labels="hover",       # "auto" | "hover" | "hidden"
-        edge_labels="hidden",      # "always" | "hover" | "hidden"
+        edge_labels="hover",       # "always" | "hover" | "hidden"
         node_label_size=11,
         edge_label_size=8,
-        label_font_family="'IBM Plex Sans', sans-serif",
-        label_font_url=(
-            "https://fonts.googleapis.com/css2?"
-            "family=IBM+Plex+Sans:wght@400;500;600&display=swap"
-        ),
         properties_panel="compact",  # "compact" | "cards" | "hidden"
         show_legend=True,
         legend_collapsed=True,
@@ -185,29 +241,67 @@ config = GraphConfig(
     layout=LayoutConfig(
         name="forceatlas2",
         iterations=120,
-        gravity=1.0,
-        scaling_ratio=12.0,
         dynamic_after_drag=True,
-        drag_solver="force",       # gentler interaction; or "forceatlas2"
+        drag_solver="force",       # "force" | "forceatlas2"
         drag_relaxation_ms=1000,
     ),
 )
 
-sigma_graph(graph, config=config)
+sigma_graph(graph, config=config, key="configured-graph")
 ```
 
-For a layout preset without custom settings, use the shorter form:
+Hierarchical layouts accept `hierarchy_direction="TB"`, `"BT"`, `"LR"`, or
+`"RL"`.
+
+To use a locally installed font, set `label_font_family`. For Google Fonts or a
+self-hosted `@font-face` stylesheet, also provide its CSS URL:
 
 ```python
-sigma_graph(graph, layout="circular")
+display = DisplayConfig(
+    label_font_family="'IBM Plex Sans', sans-serif",
+    label_font_url=(
+        "https://fonts.googleapis.com/css2?"
+        "family=IBM+Plex+Sans:wght@400;500;600&display=swap"
+    ),
+)
 ```
 
-Available initial layouts are `forceatlas2`, `force`, `circular`,
-`circlepack`, `grid`, `concentric`, `hierarchical`, `random`, and `none`.
-`hierarchical` also accepts `hierarchy_direction="TB"`, `"BT"`, `"LR"`, or
-`"RL"`. Post-drag relaxation is separate from the initial layout: the dragged
-node stays fixed at its new position while the remaining nodes briefly settle.
+## Run the example gallery
 
-For a locally installed font, set `label_font_family` only. For Google Fonts or
-a self-hosted `@font-face` stylesheet, also pass its CSS URL through
-`label_font_url`.
+The repository includes a gallery with property-graph, NetworkX, DataFrame,
+and Neo4j-like inputs, both themes, and an interactive configuration
+playground.
+
+Clone the repository, then run it with `uv`:
+
+```sh
+git clone https://github.com/gitkeniwo/streamlit-sigmajs.git
+cd streamlit-sigmajs
+uv sync --extra examples
+uv run streamlit run examples/app.py
+```
+
+Or create an editable environment with `pip`:
+
+```sh
+git clone https://github.com/gitkeniwo/streamlit-sigmajs.git
+cd streamlit-sigmajs
+python -m venv .venv
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
+python -m pip install -e ".[examples]"
+streamlit run examples/app.py
+```
+
+Downloaded datasets are stored in the ignored `examples/data/` directory.
+See the
+[example gallery notes](https://github.com/gitkeniwo/streamlit-sigmajs/blob/main/examples/README.md)
+for dataset sources and optional data preparation commands.
+
+## Compatibility
+
+The v0.1 `st_sigmagraph(graphData=...)` entry point remains available for
+existing applications. New code should use `sigma_graph(...)`.
+
+## License
+
+[Good Luck With That Public License](https://github.com/gitkeniwo/streamlit-sigmajs/blob/main/LICENSE)
