@@ -12,7 +12,9 @@ from st_sigma import normalize_graph  # noqa: E402
 
 
 def test_examples_use_valid_component_wire_format():
+    input_formats = set()
     for _name, (_input_format, _description, build_graph) in EXAMPLES.items():
+        input_formats.add(_input_format)
         input_data = build_graph()
         graph = (
             normalize_graph(input_data[0], edges=input_data[1])
@@ -27,3 +29,5 @@ def test_examples_use_valid_component_wire_format():
             edge["source"] in node_ids and edge["target"] in node_ids
             for edge in graph["edges"]
         )
+
+    assert {"Property graph dict", "NetworkX", "DataFrames", "Neo4j Graph"} <= input_formats

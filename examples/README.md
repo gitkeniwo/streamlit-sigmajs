@@ -14,9 +14,10 @@ cd ../..
 uv run --extra examples streamlit run examples/app.py
 ```
 
-The gallery uses public datasets bundled with NetworkX and an original
-synthetic supply-chain graph. To materialize JSON snapshots for adapter
-development:
+The gallery renders multiple live component instances using public datasets
+bundled with NetworkX, an original synthetic supply-chain graph, and a small
+Neo4j-compatible structural example. It also shows both themes side by side.
+To materialize JSON snapshots for adapter development:
 
 ```sh
 uv run --extra examples python examples/prepare_data.py

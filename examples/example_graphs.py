@@ -8,6 +8,58 @@ from typing import Any
 import networkx as nx
 import pandas as pd
 
+
+class Neo4jLikeNode(dict):
+    def __init__(self, element_id: str, labels: list[str], **properties: Any):
+        super().__init__(properties)
+        self.element_id = element_id
+        self.labels = set(labels)
+
+
+class Neo4jLikeRelationship(dict):
+    def __init__(
+        self,
+        element_id: str,
+        start_node: Neo4jLikeNode,
+        end_node: Neo4jLikeNode,
+        relationship_type: str,
+        **properties: Any,
+    ):
+        super().__init__(properties)
+        self.element_id = element_id
+        self.start_node = start_node
+        self.end_node = end_node
+        self.type = relationship_type
+
+
+class Neo4jLikeGraph:
+    """License-safe structural stand-in for ``neo4j.graph.Graph``."""
+
+    def __init__(self, nodes: list[Neo4jLikeNode], relationships: list[Neo4jLikeRelationship]):
+        self.nodes = nodes
+        self.relationships = relationships
+
+
+def movie_graph() -> Neo4jLikeGraph:
+    people = [
+        Neo4jLikeNode("person-ada", ["Person", "Researcher"], name="Ada", born=1815),
+        Neo4jLikeNode("person-alan", ["Person", "Researcher"], name="Alan", born=1912),
+        Neo4jLikeNode("person-grace", ["Person", "Engineer"], name="Grace", born=1906),
+    ]
+    works = [
+        Neo4jLikeNode("work-engine", ["Work"], name="Analytical Engine Notes", year=1843),
+        Neo4jLikeNode("work-computing", ["Work"], name="Computing Machinery", year=1950),
+        Neo4jLikeNode("work-compiler", ["Work"], name="A-0 Compiler", year=1952),
+    ]
+    relationships = [
+        Neo4jLikeRelationship("r1", people[0], works[0], "AUTHORED", role="translator and annotator"),
+        Neo4jLikeRelationship("r2", people[1], works[1], "AUTHORED"),
+        Neo4jLikeRelationship("r3", people[2], works[2], "CREATED"),
+        Neo4jLikeRelationship("r4", people[0], people[1], "INSPIRED", domain="computing"),
+        Neo4jLikeRelationship("r5", people[1], people[2], "CONTEMPORARY_OF"),
+    ]
+    return Neo4jLikeGraph(people + works, relationships)
+
 def karate_club() -> nx.Graph:
     graph = nx.karate_club_graph()
     for node_id, data in graph.nodes(data=True):
@@ -121,6 +173,11 @@ EXAMPLES: dict[str, tuple[str, str, Callable[[], Any]]] = {
         "DataFrames",
         "A bipartite NetworkX graph converted through node and edge DataFrames.",
         davis_southern_women,
+    ),
+    "Neo4j-like — Computing pioneers": (
+        "Neo4j Graph",
+        "A small public-fact graph using the same structural interface as neo4j.graph.Graph.",
+        movie_graph,
     ),
     "NetworkX — Les Misérables": (
         "NetworkX",
