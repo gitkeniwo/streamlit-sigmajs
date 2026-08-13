@@ -19,8 +19,9 @@ Python.
 - Configurable labels, legend, colors, fonts, and interaction behavior
 - ForceAtlas2, force, circular, circlepack, grid, concentric, hierarchical,
   random, and pre-positioned layouts
-- Post-drag relaxation by default: the dropped node stays in place while
-  nearby nodes settle; it can be disabled in `LayoutConfig`
+- Real-time spring physics while dragging: nearby nodes respond immediately,
+  then settle around the pinned dropped node without replacing the initial
+  layout; disable it with `LayoutConfig(dynamic_after_drag=False)`
 - Multiple independent graphs on the same Streamlit page
 
 ## Requirements
@@ -244,8 +245,7 @@ config = GraphConfig(
         name="forceatlas2",
         iterations=120,
         dynamic_after_drag=True,
-        drag_solver="force",       # "force" | "forceatlas2"
-        drag_relaxation_ms=1000,
+        drag_relaxation_ms=1000,    # maximum post-release settling time
     ),
 )
 
