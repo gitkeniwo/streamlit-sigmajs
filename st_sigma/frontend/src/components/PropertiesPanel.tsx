@@ -100,8 +100,8 @@ const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ selectedNode, onClose
   return (
     <div className={`properties-panel properties-panel--${mode}`}>
       <div className="properties-header">
-        <h3>Node Properties</h3>
-        <button className="close-button" onClick={onClose}>
+        <h3>Node</h3>
+        <button className="close-button" onClick={onClose} aria-label="Close node properties">
           ×
         </button>
       </div>

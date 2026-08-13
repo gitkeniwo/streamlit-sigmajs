@@ -7,6 +7,7 @@ from typing import Literal
 NodeLabelMode = Literal["auto", "hover", "hidden"]
 EdgeLabelMode = Literal["always", "hover", "hidden"]
 PropertiesPanelMode = Literal["compact", "cards", "hidden"]
+NodeSizeMode = Literal["auto", "fixed"]
 LayoutName = Literal[
     "forceatlas2",
     "force",
@@ -39,6 +40,12 @@ class DisplayConfig:
         for a hovered or selected edge.
     node_label_size : int, default=12
         Node-label font size in CSS pixels. Must be positive.
+    node_size : float, default=10
+        Default node radius in screen pixels. A positive ``size`` property on
+        an individual node takes precedence.
+    node_size_mode : {"auto", "fixed"}, default="auto"
+        ``"auto"`` reduces the default node size when the graph is dense or
+        its component is narrow. ``"fixed"`` always uses ``node_size``.
     edge_label_size : int, default=9
         Edge-label font size in CSS pixels. Must be positive.
     label_density : float, default=0.8
@@ -80,6 +87,8 @@ class DisplayConfig:
     node_labels: NodeLabelMode = "auto"
     edge_labels: EdgeLabelMode = "hover"
     node_label_size: int = 12
+    node_size: float = 10.0
+    node_size_mode: NodeSizeMode = "auto"
     edge_label_size: int = 9
     label_density: float = 0.8
     label_rendered_size_threshold: float = 6
@@ -98,8 +107,12 @@ class DisplayConfig:
             raise ValueError("edge_labels must be 'always', 'hover', or 'hidden'.")
         if self.properties_panel not in {"compact", "cards", "hidden"}:
             raise ValueError("properties_panel must be 'compact', 'cards', or 'hidden'.")
+        if self.node_size_mode not in {"auto", "fixed"}:
+            raise ValueError("node_size_mode must be 'auto' or 'fixed'.")
         if self.node_label_size <= 0 or self.edge_label_size <= 0:
             raise ValueError("Label sizes must be positive.")
+        if self.node_size <= 0:
+            raise ValueError("node_size must be positive.")
         if not self.label_font_family.strip():
             raise ValueError("label_font_family must not be empty.")
         if self.label_font_url is not None and not self.label_font_url.strip():
@@ -146,7 +159,7 @@ class LayoutConfig:
     strong_gravity_mode : bool, default=False
         Enable ForceAtlas2 strong gravity to keep distant components closer
         to the center.
-    dynamic_after_drag : bool, default=False
+    dynamic_after_drag : bool, default=True
         After a node is released, keep it at the dropped position while the
         remaining nodes briefly settle around it.
     drag_solver : {"force", "forceatlas2"}, default="force"
@@ -174,7 +187,7 @@ class LayoutConfig:
     scaling_ratio: float = 10.0
     lin_log_mode: bool = False
     strong_gravity_mode: bool = False
-    dynamic_after_drag: bool = False
+    dynamic_after_drag: bool = True
     drag_solver: DragSolver = "force"
     drag_relaxation_ms: int = 1000
     hierarchy_direction: HierarchyDirection = "TB"

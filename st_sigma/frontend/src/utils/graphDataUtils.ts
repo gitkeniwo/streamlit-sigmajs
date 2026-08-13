@@ -30,6 +30,7 @@ export const convertPropertyGraphToGraph = (
   labelColorMap: Map<string, string>,
   defaultNodeColor: string,
   defaultEdgeColor: string,
+  defaultNodeSize: number,
 ): Graph => {
   const graph = new Graph({ multi: true });
 
@@ -39,8 +40,9 @@ export const convertPropertyGraphToGraph = (
     const primaryLabel = node.labels[0] || 'Unknown';
     const color = labelColorMap.get(primaryLabel) || defaultNodeColor;
     
-    // compute size based on a "size" property or default
-    const size = node.properties.size || 12;
+    const configuredSize = Number(node.properties.size);
+    const hasExplicitSize = Number.isFinite(configuredSize) && configuredSize > 0;
+    const size = hasExplicitSize ? configuredSize : defaultNodeSize;
     
     // use name, label, or title property as label if available
     const label = node.properties.name || 
@@ -62,6 +64,7 @@ export const convertPropertyGraphToGraph = (
       labels: node.labels,
       properties: node.properties,
       baseSize: size,
+      hasExplicitSize,
       baseColor: color,
     });
   });

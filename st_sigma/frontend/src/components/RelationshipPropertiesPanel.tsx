@@ -108,8 +108,8 @@ const RelationshipPropertiesPanel: React.FC<RelationshipPropertiesPanelProps> = 
   return (
     <div className={`properties-panel relationship-panel properties-panel--${mode}`}>
       <div className="properties-header">
-        <h3>Relationship Properties</h3>
-        <button className="close-button" onClick={onClose}>
+        <h3>Relationship</h3>
+        <button className="close-button" onClick={onClose} aria-label="Close relationship properties">
           ×
         </button>
       </div>
