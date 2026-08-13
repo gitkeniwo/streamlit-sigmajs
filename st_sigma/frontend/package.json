@@ -18,7 +18,8 @@
   },
   "scripts": {
     "start": "vite",
-    "build": "tsc && vite build"
+    "build": "tsc && vite build",
+    "test": "vitest run"
   },
   "eslintConfig": {
     "extends": "react-app"
@@ -42,7 +43,9 @@
     "@types/react-dom": "^18.3.6",
     "@types/sigmajs": "^1.0.32",
     "@vitejs/plugin-react-swc": "^3.9.0",
+    "jsdom": "^26.1.0",
     "typescript": "^5.8.3",
-    "vite": "^6.4.3"
+    "vite": "^6.4.3",
+    "vitest": "^3.2.7"
   }
 }
