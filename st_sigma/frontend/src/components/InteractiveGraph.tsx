@@ -1,7 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Graph from 'graphology';
-import forceLayout from 'graphology-layout-force';
-import FA2LayoutSupervisor from 'graphology-layout-forceatlas2/worker';
 import Sigma from 'sigma';
 import { NodeBorderProgram } from '@sigma/node-border';
 
@@ -17,6 +15,7 @@ import {
 import { createLabelColorMap } from '../utils/colorUtils';
 import { getThemeTokens } from '../utils/theme';
 import { applyInitialLayout } from '../utils/layoutUtils';
+import { createDragPhysics } from '../utils/dragPhysics';
 
 import './InteractiveGraph.css';
 
@@ -50,7 +49,6 @@ const DEFAULT_CONFIG: GraphConfig = {
     lin_log_mode: false,
     strong_gravity_mode: false,
     dynamic_after_drag: true,
-    drag_solver: 'force',
     drag_relaxation_ms: 1000,
     hierarchy_direction: 'TB',
   },
@@ -403,100 +401,40 @@ const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
     });
     resizeObserver.observe(containerRef.current);
 
-    let dynamicLayout: FA2LayoutSupervisor | null = null;
-    let relaxationTimer: ReturnType<typeof setTimeout> | null = null;
-    let forceFrame: number | null = null;
-    let fixedLayoutNode: string | null = null;
-    let draggedPosition: { x: number; y: number } | null = null;
+    const dragPhysics = createDragPhysics(graph, {
+      onUpdate: (movedNodes) => {
+        sigma.refresh({ partialGraph: { nodes: movedNodes } });
+      },
+    });
     let dragMoved = false;
     let suppressNodeClickUntil = 0;
 
     const stopDynamicLayout = () => {
-      if (relaxationTimer) clearTimeout(relaxationTimer);
-      relaxationTimer = null;
-      if (forceFrame !== null) cancelAnimationFrame(forceFrame);
-      forceFrame = null;
-      dynamicLayout?.stop();
-      dynamicLayout?.kill();
-      dynamicLayout = null;
-      if (fixedLayoutNode && graph.hasNode(fixedLayoutNode)) {
-        graph.removeNodeAttribute(fixedLayoutNode, 'fixed');
-      }
-      fixedLayoutNode = null;
-      draggedPosition = null;
-    };
-
-    const startPostDragLayout = (
-      node: string,
-      position: { x: number; y: number },
-    ) => {
-      if (!layoutConfig.dynamic_after_drag || layoutConfig.drag_relaxation_ms === 0) return false;
-      stopDynamicLayout();
-      fixedLayoutNode = node;
-      draggedPosition = position;
-      graph.setNodeAttribute(node, 'fixed', true);
-
-      if (layoutConfig.drag_solver === 'force') {
-        const graphSpan = Math.max(
-          stableGraphBounds.x[1] - stableGraphBounds.x[0],
-          stableGraphBounds.y[1] - stableGraphBounds.y[0],
-          1,
-        );
-        const runForceFrame = () => {
-          if (!fixedLayoutNode || !draggedPosition) return;
-          forceLayout.assign(graph, {
-            maxIterations: 1,
-            isNodeFixed: (key) => key === fixedLayoutNode,
-            settings: {
-              attraction: 0.00008,
-              repulsion: 0.04,
-              gravity: 0.00001,
-              inertia: 0,
-              maxMove: graphSpan * 0.0015,
-            },
-          });
-          graph.mergeNodeAttributes(fixedLayoutNode, draggedPosition);
-          sigma.refresh();
-          forceFrame = requestAnimationFrame(runForceFrame);
-        };
-        runForceFrame();
-      } else {
-        dynamicLayout = new FA2LayoutSupervisor(graph, {
-          settings: { ...forceAtlasSettings, slowDown: 8 },
-          outputReducer: (key, attributes) => {
-            if (key === fixedLayoutNode && draggedPosition) {
-              return { ...attributes, ...draggedPosition };
-            }
-            return attributes;
-          },
-        });
-        dynamicLayout.start();
-      }
-      relaxationTimer = setTimeout(() => {
-        stopDynamicLayout();
-        sigma.refresh();
-      }, layoutConfig.drag_relaxation_ms);
-      return true;
+      dragPhysics.stop();
     };
 
     const finishDragging = () => {
+      if (!isDraggingRef.current) return;
       const draggedNode = draggedNodeRef.current;
-      const finalPosition = draggedNode && graph.hasNode(draggedNode)
-        ? {
-            x: graph.getNodeAttribute(draggedNode, 'x'),
-            y: graph.getNodeAttribute(draggedNode, 'y'),
-          }
-        : null;
       isDraggingRef.current = false;
       draggedNodeRef.current = null;
       document.body.style.cursor = 'default';
       sigma.setSetting('enableCameraPanning', true);
-      if (dragMoved && draggedNode && finalPosition) {
+      if (dragMoved && draggedNode) {
         suppressNodeClickUntil = Date.now() + 150;
-        startPostDragLayout(draggedNode, finalPosition);
+        if (layoutConfig.dynamic_after_drag && layoutConfig.drag_relaxation_ms > 0) {
+          dragPhysics.release(layoutConfig.drag_relaxation_ms);
+        } else {
+          dragPhysics.stop();
+        }
       }
       dragMoved = false;
-      sigma.refresh();
+      if (draggedNode && graph.hasNode(draggedNode)) {
+        sigma.refresh({
+          partialGraph: { nodes: [draggedNode] },
+          skipIndexation: true,
+        });
+      }
     };
 
     sigma.on('downNode', ({ node }) => {
@@ -506,7 +444,7 @@ const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
       draggedNodeRef.current = node;
       dragMoved = false;
       document.body.style.cursor = 'grabbing';
-      sigma.refresh();
+      sigma.refresh({ skipIndexation: true });
     });
 
     sigma.getMouseCaptor().on('mousemovebody', (event) => {
@@ -514,9 +452,12 @@ const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
 
       const position = sigma.viewportToGraph(event);
       dragMoved = true;
-      draggedPosition = position;
-      graph.setNodeAttribute(draggedNodeRef.current, 'x', position.x);
-      graph.setNodeAttribute(draggedNodeRef.current, 'y', position.y);
+      if (layoutConfig.dynamic_after_drag && layoutConfig.drag_relaxation_ms > 0) {
+        if (!dragPhysics.isActive()) dragPhysics.begin(draggedNodeRef.current);
+        dragPhysics.dragTo(position.x, position.y);
+      } else {
+        graph.mergeNodeAttributes(draggedNodeRef.current, position);
+      }
 
       event.preventSigmaDefault();
       event.original.preventDefault();
@@ -530,15 +471,21 @@ const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
 
       const position = sigma.viewportToGraph(event.touches[0]);
       dragMoved = true;
-      draggedPosition = position;
-      graph.setNodeAttribute(draggedNodeRef.current, 'x', position.x);
-      graph.setNodeAttribute(draggedNodeRef.current, 'y', position.y);
+      if (layoutConfig.dynamic_after_drag && layoutConfig.drag_relaxation_ms > 0) {
+        if (!dragPhysics.isActive()) dragPhysics.begin(draggedNodeRef.current);
+        dragPhysics.dragTo(position.x, position.y);
+      } else {
+        graph.mergeNodeAttributes(draggedNodeRef.current, position);
+      }
 
       event.preventSigmaDefault();
       event.original.preventDefault();
       event.original.stopPropagation();
     });
     sigma.getTouchCaptor().on('touchup', finishDragging);
+    window.addEventListener('mouseup', finishDragging);
+    window.addEventListener('pointercancel', finishDragging);
+    window.addEventListener('touchend', finishDragging);
 
     sigma.on('clickNode', ({ node }) => {
       if (isDraggingRef.current || Date.now() < suppressNodeClickUntil) return;
@@ -615,6 +562,9 @@ const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
     });
 
     return () => {
+      window.removeEventListener('mouseup', finishDragging);
+      window.removeEventListener('pointercancel', finishDragging);
+      window.removeEventListener('touchend', finishDragging);
       resizeObserver.disconnect();
       stopDynamicLayout();
       sigma.kill();

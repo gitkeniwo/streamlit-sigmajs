@@ -120,7 +120,6 @@ def test_sigma_graph_serializes_advanced_display_and_layout_config(monkeypatch):
             name="hierarchical",
             iterations=42,
             dynamic_after_drag=True,
-            drag_solver="force",
             hierarchy_direction="LR",
         ),
     )
@@ -136,7 +135,7 @@ def test_sigma_graph_serializes_advanced_display_and_layout_config(monkeypatch):
     assert result["data"]["config"]["display"]["label_font_family"].startswith("'IBM")
     assert result["data"]["config"]["layout"]["name"] == "random"
     assert result["data"]["config"]["layout"]["iterations"] == 42
-    assert result["data"]["config"]["layout"]["drag_solver"] == "force"
+    assert "drag_solver" not in result["data"]["config"]["layout"]
     assert result["data"]["config"]["layout"]["hierarchy_direction"] == "LR"
 
 
@@ -149,7 +148,6 @@ def test_sigma_graph_serializes_advanced_display_and_layout_config(monkeypatch):
         (lambda: DisplayConfig(node_size_mode="relative"), "node_size_mode"),
         (lambda: DisplayConfig(node_size=0), "node_size"),
         (lambda: LayoutConfig(name="spiral"), "layout name"),
-        (lambda: LayoutConfig(drag_solver="spring"), "drag_solver"),
         (lambda: LayoutConfig(hierarchy_direction="diagonal"), "hierarchy_direction"),
         (lambda: LayoutConfig(drag_relaxation_ms=-1), "drag_relaxation_ms"),
     ],

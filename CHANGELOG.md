@@ -7,6 +7,10 @@ Notable changes to `streamlit-sigmajs` are documented here.
 ### Changed
 
 - Enabled post-drag layout relaxation by default.
+- Replaced the per-frame stateless force solver with real-time local spring
+  physics during dragging and velocity-based settling after release.
+- Removed the post-drag ForceAtlas2 solver option because global relayout after
+  a drag conflicted with explicitly selected initial layouts.
 - Reworked the example gallery as sidebar-navigated pages with controls local
   to the Playground.
 - Made property inspectors responsive to both component width and height,
@@ -17,6 +21,12 @@ Notable changes to `streamlit-sigmajs` are documented here.
   setting for dense graphs and small graph components.
 - Moved Playground controls beside the graph and kept the sidebar for page
   navigation only.
+
+### Compatibility
+
+- `LayoutConfig.drag_solver` has been removed. Drag interactions now always use
+  the layout-preserving local spring model; initial `name="forceatlas2"`
+  placement remains available.
 
 ## [0.2.0] - 2026-08-13
 
