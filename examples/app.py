@@ -141,7 +141,6 @@ def full_config_code(
                 lin_log_mode={layout.lin_log_mode!r},
                 strong_gravity_mode={layout.strong_gravity_mode!r},
                 dynamic_after_drag={layout.dynamic_after_drag!r},
-                drag_solver={layout.drag_solver!r},
                 drag_relaxation_ms={layout.drag_relaxation_ms!r},
                 hierarchy_direction={layout.hierarchy_direction!r},
             ),
@@ -231,13 +230,8 @@ def playground_page() -> None:
 
         with st.expander("After dragging"):
             dynamic_after_drag = st.checkbox("Relax neighbors", value=True)
-            drag_solver = st.selectbox(
-                "Solver",
-                ["force", "forceatlas2"],
-                disabled=not dynamic_after_drag,
-            )
             drag_relaxation_ms = st.slider(
-                "Duration (ms)",
+                "Maximum settling time (ms)",
                 200,
                 3000,
                 1000,
@@ -272,7 +266,6 @@ def playground_page() -> None:
             lin_log_mode=lin_log_mode,
             strong_gravity_mode=strong_gravity_mode,
             dynamic_after_drag=dynamic_after_drag,
-            drag_solver=drag_solver,
             drag_relaxation_ms=drag_relaxation_ms,
             hierarchy_direction=hierarchy_direction,
         ),

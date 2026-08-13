@@ -19,7 +19,6 @@ LayoutName = Literal[
     "random",
     "none",
 ]
-DragSolver = Literal["force", "forceatlas2"]
 HierarchyDirection = Literal["TB", "BT", "LR", "RL"]
 
 
@@ -148,8 +147,7 @@ class LayoutConfig:
         placement. This setting does not affect the other presets.
     gravity : float, default=1.0
         ForceAtlas2 gravity pulling disconnected regions toward the center.
-        Must be non-negative. Used by the initial ForceAtlas2 layout and by
-        post-drag relaxation when ``drag_solver="forceatlas2"``.
+        Must be non-negative. Used by the initial ForceAtlas2 layout.
     scaling_ratio : float, default=10.0
         ForceAtlas2 repulsion scaling. Larger values generally spread nodes
         farther apart. Must be positive.
@@ -160,14 +158,12 @@ class LayoutConfig:
         Enable ForceAtlas2 strong gravity to keep distant components closer
         to the center.
     dynamic_after_drag : bool, default=True
-        After a node is released, keep it at the dropped position while the
-        remaining nodes briefly settle around it.
-    drag_solver : {"force", "forceatlas2"}, default="force"
-        Solver used for post-drag relaxation. ``"force"`` gives a gentle,
-        interactive response for small and medium graphs.
-        ``"forceatlas2"`` runs in a worker and is suitable for larger graphs.
+        While a node is dragged, let nearby nodes respond dynamically. After
+        release, keep the dragged node at the dropped position while the
+        remaining nodes settle.
     drag_relaxation_ms : int, default=1000
-        Duration of post-drag relaxation in milliseconds. ``0`` disables the
+        Maximum settling time after release in milliseconds. Relaxation stops
+        early when the graph converges. ``0`` disables dynamic dragging and
         relaxation even when ``dynamic_after_drag`` is true.
     hierarchy_direction : {"TB", "BT", "LR", "RL"}, default="TB"
         Direction for the ``"hierarchical"`` layout: top-to-bottom,
@@ -176,9 +172,9 @@ class LayoutConfig:
 
     Notes
     -----
-    Initial placement and post-drag relaxation are independent. For example,
-    a circular graph can still use the simple force solver after a node is
-    dragged.
+    Initial placement and drag physics are independent. For example, the
+    spring-damper solver deforms a circular graph locally and then restores its
+    shape without replacing the selected initial layout.
     """
 
     name: LayoutName = "forceatlas2"
@@ -188,7 +184,6 @@ class LayoutConfig:
     lin_log_mode: bool = False
     strong_gravity_mode: bool = False
     dynamic_after_drag: bool = True
-    drag_solver: DragSolver = "force"
     drag_relaxation_ms: int = 1000
     hierarchy_direction: HierarchyDirection = "TB"
 
@@ -205,8 +200,6 @@ class LayoutConfig:
             "none",
         }:
             raise ValueError("Unsupported layout name.")
-        if self.drag_solver not in {"force", "forceatlas2"}:
-            raise ValueError("drag_solver must be 'force' or 'forceatlas2'.")
         if self.hierarchy_direction not in {"TB", "BT", "LR", "RL"}:
             raise ValueError("hierarchy_direction must be 'TB', 'BT', 'LR', or 'RL'.")
         if self.iterations < 0:
