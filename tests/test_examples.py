@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sys
+from dataclasses import fields
 from pathlib import Path
 
 
@@ -8,7 +9,7 @@ EXAMPLES_DIR = Path(__file__).parents[1] / "examples"
 sys.path.insert(0, str(EXAMPLES_DIR))
 
 from example_graphs import EXAMPLES, supply_chain  # noqa: E402
-from st_sigma import normalize_graph  # noqa: E402
+from st_sigma import DisplayConfig, LayoutConfig, normalize_graph  # noqa: E402
 
 
 def test_examples_use_valid_component_wire_format():
@@ -41,3 +42,22 @@ def test_supply_chain_supports_the_prepositioned_layout():
         and isinstance(node["properties"].get("y"), (int, float))
         for node in graph["nodes"]
     )
+
+
+def test_gallery_uses_sidebar_page_navigation():
+    source = (EXAMPLES_DIR / "app.py").read_text(encoding="utf-8")
+
+    assert "st.navigation(" in source
+    assert "st.Page(playground_page" in source
+    assert "with st.sidebar" not in source
+    assert 'st.columns([3, 1]' in source
+    assert '"Gallery section"' not in source
+
+
+def test_gallery_code_examples_show_every_configuration_field():
+    source = (EXAMPLES_DIR / "app.py").read_text(encoding="utf-8")
+
+    assert '"node_size_mode": "auto"' in source
+    for config_type in (DisplayConfig, LayoutConfig):
+        for field in fields(config_type):
+            assert f"{field.name}={{" in source

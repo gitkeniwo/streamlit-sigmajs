@@ -19,8 +19,8 @@ Python.
 - Configurable labels, legend, colors, fonts, and interaction behavior
 - ForceAtlas2, force, circular, circlepack, grid, concentric, hierarchical,
   random, and pre-positioned layouts
-- Optional post-drag relaxation: the dropped node stays in place while nearby
-  nodes settle
+- Post-drag relaxation by default: the dropped node stays in place while
+  nearby nodes settle; it can be disabled in `LayoutConfig`
 - Multiple independent graphs on the same Streamlit page
 
 ## Requirements
@@ -229,6 +229,8 @@ from st_sigma import DisplayConfig, GraphConfig, LayoutConfig, sigma_graph
 
 config = GraphConfig(
     display=DisplayConfig(
+        node_size_mode="auto",     # "auto" | "fixed"
+        node_size=10,
         node_labels="hover",       # "auto" | "hover" | "hidden"
         edge_labels="hover",       # "always" | "hover" | "hidden"
         node_label_size=11,
@@ -265,6 +267,11 @@ display = DisplayConfig(
     ),
 )
 ```
+
+Automatic node sizing is enabled by default. It scales nodes down for dense
+graphs and narrow components while treating `node_size` as the maximum default
+size. Set `node_size_mode="fixed"` to use the configured size at every
+component width. A positive `size` property on a node always takes precedence.
 
 ## Run the example gallery
 

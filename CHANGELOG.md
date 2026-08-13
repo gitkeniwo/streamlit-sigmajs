@@ -2,6 +2,22 @@
 
 Notable changes to `streamlit-sigmajs` are documented here.
 
+## Unreleased
+
+### Changed
+
+- Enabled post-drag layout relaxation by default.
+- Reworked the example gallery as sidebar-navigated pages with controls local
+  to the Playground.
+- Made property inspectors responsive to both component width and height,
+  aligned compact and card panel geometry, and tightened compact spacing.
+- Restored a smaller graph-frame inset and replaced the red selected-node ring
+  with a category-colored emphasis treatment.
+- Added adaptive and fixed default node sizing, with an explicit `node_size`
+  setting for dense graphs and small graph components.
+- Moved Playground controls beside the graph and kept the sidebar for page
+  navigation only.
+
 ## [0.2.0] - 2026-08-13
 
 ### Added

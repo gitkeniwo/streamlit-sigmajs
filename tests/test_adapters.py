@@ -94,6 +94,13 @@ def test_sigma_graph_passes_normalized_data_and_theme(monkeypatch):
     assert result["data"]["graphData"]["nodes"][0]["labels"] == ["Person"]
     assert result["data"]["config"]["display"]["edge_labels"] == "hover"
     assert result["data"]["config"]["display"]["properties_panel"] == "compact"
+    assert result["data"]["config"]["display"]["node_size_mode"] == "auto"
+    assert result["data"]["config"]["display"]["node_size"] == 10
+    assert result["data"]["config"]["layout"]["dynamic_after_drag"] is True
+
+
+def test_post_drag_relaxation_is_enabled_by_default():
+    assert LayoutConfig().dynamic_after_drag is True
 
 
 def test_sigma_graph_serializes_advanced_display_and_layout_config(monkeypatch):
@@ -139,6 +146,8 @@ def test_sigma_graph_serializes_advanced_display_and_layout_config(monkeypatch):
         (lambda: DisplayConfig(edge_labels="sometimes"), "edge_labels"),
         (lambda: DisplayConfig(selection_dimming=2), "selection_dimming"),
         (lambda: DisplayConfig(label_font_family="  "), "label_font_family"),
+        (lambda: DisplayConfig(node_size_mode="relative"), "node_size_mode"),
+        (lambda: DisplayConfig(node_size=0), "node_size"),
         (lambda: LayoutConfig(name="spiral"), "layout name"),
         (lambda: LayoutConfig(drag_solver="spring"), "drag_solver"),
         (lambda: LayoutConfig(hierarchy_direction="diagonal"), "hierarchy_direction"),

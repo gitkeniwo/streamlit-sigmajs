@@ -22,6 +22,8 @@ export interface DisplayConfig {
   node_labels: 'auto' | 'hover' | 'hidden';
   edge_labels: 'always' | 'hover' | 'hidden';
   node_label_size: number;
+  node_size: number;
+  node_size_mode: 'auto' | 'fixed';
   edge_label_size: number;
   label_density: number;
   label_rendered_size_threshold: number;

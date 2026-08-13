@@ -29,6 +29,8 @@ const DEFAULT_CONFIG: GraphConfig = {
     node_labels: 'auto',
     edge_labels: 'hover',
     node_label_size: 12,
+    node_size: 10,
+    node_size_mode: 'auto',
     edge_label_size: 9,
     label_density: 0.8,
     label_rendered_size_threshold: 6,
@@ -47,7 +49,7 @@ const DEFAULT_CONFIG: GraphConfig = {
     scaling_ratio: 10,
     lin_log_mode: false,
     strong_gravity_mode: false,
-    dynamic_after_drag: false,
+    dynamic_after_drag: true,
     drag_solver: 'force',
     drag_relaxation_ms: 1000,
     hierarchy_direction: 'TB',
@@ -95,10 +97,23 @@ const getStableGraphBounds = (graph: Graph) => {
   };
 };
 
+const getAdaptiveNodeSize = (
+  width: number,
+  height: number,
+  nodeCount: number,
+  configuredSize: number,
+) => {
+  if (nodeCount <= 0) return configuredSize;
+  const availableArea = Math.max(width * height, 1);
+  const densityScale = Math.sqrt(availableArea / (nodeCount * 8000));
+  return Math.max(Math.min(configuredSize, configuredSize * densityScale), 3);
+};
+
 const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const sigmaRef = useRef<Sigma | null>(null);
   const graphRef = useRef<Graph | null>(null);
+  const adaptiveNodeSizeRef = useRef(10);
 
   const draggedNodeRef = useRef<string | null>(null);
   const isDraggingRef = useRef(false);
@@ -144,6 +159,13 @@ const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
 
     return () => link.remove();
   }, [displayConfig.label_font_url, displayConfig.label_font_family]);
+
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      sigmaRef.current?.resize(true).refresh();
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [componentHeight]);
 
   const clearSelectedNode = () => {
     selectedNodeIdRef.current = null;
@@ -202,6 +224,7 @@ const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
       labelColorMap,
       theme.node,
       theme.edge,
+      displayConfig.node_size,
     );
     graphRef.current = graph;
     const renderedBackground = getComputedStyle(containerRef.current).backgroundColor;
@@ -214,6 +237,21 @@ const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
     };
 
     applyInitialLayout(graph, layoutConfig, forceAtlasSettings);
+
+    const updateAdaptiveNodeSize = () => {
+      const container = containerRef.current;
+      if (!container || displayConfig.node_size_mode === 'fixed') {
+        adaptiveNodeSizeRef.current = displayConfig.node_size;
+        return;
+      }
+      adaptiveNodeSizeRef.current = getAdaptiveNodeSize(
+        container.clientWidth,
+        container.clientHeight,
+        graph.order,
+        displayConfig.node_size,
+      );
+    };
+    updateAdaptiveNodeSize();
 
     const sigma = new Sigma(graph, containerRef.current, {
       nodeProgramClasses: { border: NodeBorderProgram },
@@ -232,7 +270,9 @@ const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
       hideEdgesOnMove: displayConfig.hide_edges_on_move,
       enableEdgeEvents: true,
       nodeReducer: (node, data) => {
-        const baseSize = data.baseSize ?? data.size;
+        const baseSize = data.hasExplicitSize
+          ? (data.baseSize ?? data.size)
+          : adaptiveNodeSizeRef.current;
         const baseColor = data.baseColor ?? data.color;
         const displayData: Record<string, any> = {
           ...data,
@@ -246,8 +286,11 @@ const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
         const selectedNodeId = selectedNodeIdRef.current;
         if (selectedNodeId) {
           if (node === selectedNodeId) {
-            displayData.size = baseSize * 1.06;
-            displayData.borderColor = theme.selected;
+            displayData.size = baseSize * 1.1;
+            displayData.color = mixColors(baseColor, theme.background, 0.08);
+            displayData.borderColor = mixColors(baseColor, theme.text, 0.42);
+            displayData.highlighted = true;
+            displayData.forceLabel = true;
           } else if (!selectedNodeNeighborsRef.current.has(node)) {
             displayData.color = mixColors(
               baseColor,
@@ -264,8 +307,9 @@ const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
 
         if (selectedEdgeIdRef.current) {
           if (selectedEdgeNodesRef.current.has(node)) {
-            displayData.size = baseSize * 1.04;
-            displayData.borderColor = theme.selected;
+            displayData.size = baseSize * 1.06;
+            displayData.borderColor = mixColors(baseColor, theme.text, 0.3);
+            displayData.forceLabel = true;
           } else {
             displayData.color = mixColors(
               baseColor,
@@ -282,11 +326,13 @@ const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
 
         if (hoveredNodeRef.current === node) {
           displayData.size = baseSize * 1.08;
-          displayData.borderColor = theme.selected;
+          displayData.borderColor = mixColors(baseColor, theme.text, 0.3);
+          displayData.forceLabel = true;
         }
 
         if (draggedNodeRef.current === node) {
-          displayData.borderColor = theme.selected;
+          displayData.size = baseSize * 1.08;
+          displayData.borderColor = mixColors(baseColor, theme.text, 0.38);
         }
 
         if (displayConfig.node_labels === 'hidden') {
@@ -350,6 +396,12 @@ const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
     sigma.setCustomBBox(stableGraphBounds);
     sigma.refresh();
     sigmaRef.current = sigma;
+
+    const resizeObserver = new ResizeObserver(() => {
+      updateAdaptiveNodeSize();
+      sigma.resize(true).refresh();
+    });
+    resizeObserver.observe(containerRef.current);
 
     let dynamicLayout: FA2LayoutSupervisor | null = null;
     let relaxationTimer: ReturnType<typeof setTimeout> | null = null;
@@ -563,6 +615,7 @@ const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
     });
 
     return () => {
+      resizeObserver.disconnect();
       stopDynamicLayout();
       sigma.kill();
       sigmaRef.current = null;
@@ -588,11 +641,11 @@ const InteractiveGraph: React.FC<InteractiveGraphProps> = ({ args }) => {
       data-theme={themeName}
       style={{ fontFamily: displayConfig.label_font_family }}
     >
-      <div className="content-wrapper">
+      <div className="content-wrapper" style={{ height: `${componentHeight}px` }}>
         <div
           ref={containerRef}
           className="sigma-container"
-          style={{ width: '100%', height: `${componentHeight}px` }}
+          style={{ width: '100%', height: '100%' }}
         />
 
         {displayConfig.show_legend && (
