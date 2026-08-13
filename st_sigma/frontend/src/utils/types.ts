@@ -44,7 +44,6 @@ export interface LayoutConfig {
   lin_log_mode: boolean;
   strong_gravity_mode: boolean;
   dynamic_after_drag: boolean;
-  drag_solver: 'force' | 'forceatlas2';
   drag_relaxation_ms: number;
   hierarchy_direction: 'TB' | 'BT' | 'LR' | 'RL';
 }
