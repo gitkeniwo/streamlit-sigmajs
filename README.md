@@ -7,9 +7,10 @@
 Interactive property-graph visualization for Streamlit, powered by
 [Sigma.js](https://www.sigmajs.org/). Pass a property-graph dictionary,
 NetworkX graph, Neo4j graph result, or pair of pandas DataFrames directly from
-Python.
+Python. [Test it yourself on our **demo** site](https://st-sigma.streamlit.app).
 
 <img width="1449" height="830" alt="image" src="https://github.com/user-attachments/assets/5d08ea19-3760-4e31-9708-c8db0c64d09e" />
+
 
 
 ## Features
