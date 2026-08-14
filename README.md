@@ -16,8 +16,12 @@ Python.
 
 - Direct NetworkX, Neo4j, DataFrame, and property-graph inputs
 - Streamlit-native and warm humanistic themes
+- Explicit property mappings for node size, color, label, and coordinates —
+  properties stay application data until you opt one into rendering
+- Node and edge click events plus persistent selection state returned to Python
 - Node and edge selection with compact property inspectors
 - Configurable labels, legend, colors, fonts, and interaction behavior
+- In-page graph expansion over the browser viewport, closed with Escape
 - ForceAtlas2, force, circular, circlepack, grid, concentric, hierarchical,
   random, and pre-positioned layouts
 - Real-time spring physics while dragging: nearby nodes respond immediately,
@@ -240,10 +244,14 @@ config = GraphConfig(
         edge_labels="hover",       # "always" | "hover" | "hidden"
         node_label_size=11,
         edge_label_size=8,
+        label_density=0.8,                 # only used when node_labels="auto"
+        label_rendered_size_threshold=6,   # only used when node_labels="auto"
         properties_panel="compact",  # "compact" | "cards" | "hidden"
         show_legend=True,
         legend_collapsed=True,
+        show_fullscreen_button=True,
         selection_dimming=0.68,
+        hide_edges_on_move=False,  # hide edges while panning or zooming
     ),
     layout=LayoutConfig(
         name="forceatlas2",
@@ -260,6 +268,13 @@ sigma_graph(graph, config=config, key="configured-graph")
 
 Hierarchical layouts accept `hierarchy_direction="TB"`, `"BT"`, `"LR"`, or
 `"RL"`.
+
+With `node_labels="auto"`, Sigma decides how many labels fit on screen. Lower
+`label_density` (`0` to `1`, default `0.8`) to thin out labels on crowded
+graphs, and raise `label_rendered_size_threshold` (default `6`) so that only
+nodes drawn above that pixel size are labeled — a useful pairing with
+`node_size_field` when you want just the hubs named. Both settings are ignored
+when `node_labels` is `"hover"` or `"hidden"`.
 
 To use a locally installed font, set `label_font_family`. For Google Fonts or a
 self-hosted `@font-face` stylesheet, also provide its CSS URL:
@@ -281,6 +296,12 @@ component width. Properties are always preserved as application data; set
 `node_size_field`, `node_color_field`, `node_label_field`, `node_x_field`, or
 `node_y_field` when you explicitly want a property to control rendering.
 
+Visible node labels read only `node_label_field`, which defaults to `name`, and
+fall back to the node ID when the property is missing. Graphs that carry their
+display text under another key must set the field explicitly, for example
+`DisplayConfig(node_label_field="title")`. Node colors follow the primary node
+label unless `node_color_field` names a categorical property.
+
 The returned component result exposes interaction state. `result.clicked` is a
 one-rerun event with `{"type": "node" | "edge", "id": ...}`, while
 `result.selection` persists the current `nodes` and `edges` arrays. Optional
@@ -289,9 +310,13 @@ component callback convention.
 
 ## Run the example gallery
 
-The repository includes a single-page graph playground with sidebar controls,
-live selection details, and a comparison view for property-graph, NetworkX,
-DataFrame, and Neo4j-like inputs, themes, layouts, and display presets.
+The repository includes a two-view example app. **Playground** pairs sidebar
+controls for datasets, themes, layouts, property mappings, and display options
+with the generated code, the underlying data, and live click and selection
+state. **Compare** shows four task-oriented scenarios side by side — knowledge
+graph, influence and hubs, categorical mapping, and clean topology — each built
+on a different input type, with one click to load its settings into the
+Playground.
 
 Clone the repository, then run it with `uv`:
 
@@ -322,6 +347,13 @@ for dataset sources and optional data preparation commands.
 
 The v0.1 `st_sigmagraph(graphData=...)` entry point remains available for
 existing applications. New code should use `sigma_graph(...)`.
+
+Two behaviors changed since 0.2.0:
+
+- Node labels no longer fall back through `name`, `label`, and `title`. Set
+  `DisplayConfig(node_label_field=...)` when your display text lives elsewhere.
+- Duplicate node or edge IDs and edges pointing at missing nodes now raise
+  `ValueError` instead of being rendered partially.
 
 ## License
 
