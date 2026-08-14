@@ -1,6 +1,6 @@
 [project]
 name = "streamlit-sigmajs"
-version = "0.2.0"
+version = "0.3.0"
 
 [[tool.streamlit.component.components]]
 name = "sigma_graph"

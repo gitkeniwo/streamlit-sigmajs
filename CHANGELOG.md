@@ -2,10 +2,12 @@
 
 Notable changes to `streamlit-sigmajs` are documented here.
 
-## Unreleased
+## [0.3.0] - 2026-08-14
 
 ### Added
 
+- Added a `py.typed` marker so type checkers use the shipped annotations, and
+  declared PyPI classifiers including `Typing :: Typed`.
 - Added explicit `node_size_field`, `node_color_field`, `node_label_field`,
   `node_x_field`, and `node_y_field` mappings so application properties are no
   longer interpreted as rendering attributes implicitly.
@@ -117,5 +119,6 @@ Notable changes to `streamlit-sigmajs` are documented here.
   original Streamlit template.
 - Added a wheel installation smoke test to the build workflow.
 
+[0.3.0]: https://github.com/gitkeniwo/streamlit-sigmajs/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/gitkeniwo/streamlit-sigmajs/compare/v0.1.2...v0.2.0
 [0.1.2]: https://github.com/gitkeniwo/streamlit-sigmajs/releases/tag/v0.1.2
