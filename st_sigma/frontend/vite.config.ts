@@ -14,7 +14,7 @@ export default defineConfig(({ mode }) => {
   return {
     base: "./",
     define: {
-      "process.env.NODE_ENV": JSON.stringify(mode === "test" ? "development" : "production"),
+      "process.env.NODE_ENV": JSON.stringify(mode === "test" ? "test" : "production"),
     },
     plugins: [react()],
     server: {

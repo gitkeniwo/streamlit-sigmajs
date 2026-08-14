@@ -1,3 +1,5 @@
+import { mixColors } from './colorUtils';
+
 export type ThemeName = 'streamlit' | 'humanistic';
 
 export interface GraphThemeTokens {
@@ -31,4 +33,38 @@ const THEMES: Record<ThemeName, GraphThemeTokens> = {
   },
 };
 
-export const getThemeTokens = (theme: ThemeName): GraphThemeTokens => THEMES[theme];
+const cssValue = (styles: CSSStyleDeclaration, name: string, fallback: string): string => {
+  const value = styles.getPropertyValue(name).trim();
+  return value && !['unset', 'inherit', 'initial'].includes(value.toLowerCase())
+    ? value
+    : fallback;
+};
+
+const parsePalette = (value: string): string[] => {
+  const matches = value.match(/#[0-9a-f]{3,8}\b|rgba?\([^)]*\)/gi);
+  return matches?.filter(Boolean) || [];
+};
+
+export const getThemeTokens = (
+  theme: ThemeName,
+  container?: Element | null,
+): GraphThemeTokens => {
+  const fallback = THEMES[theme];
+  if (theme !== 'streamlit' || !container) return { ...fallback, palette: [...fallback.palette] };
+
+  const styles = getComputedStyle(container);
+  const background = cssValue(styles, '--st-background-color', fallback.background);
+  const text = cssValue(styles, '--st-text-color', fallback.text);
+  const selected = cssValue(styles, '--st-primary-color', fallback.selected);
+  const configuredPalette = parsePalette(styles.getPropertyValue('--st-chart-categorical-colors'));
+
+  return {
+    palette: configuredPalette.length ? configuredPalette : [...fallback.palette],
+    node: mixColors(text, background, 0.5),
+    edge: mixColors(text, background, 0.58),
+    edgeMuted: mixColors(text, background, 0.82),
+    selected,
+    text,
+    background,
+  };
+};

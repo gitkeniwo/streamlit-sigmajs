@@ -23,6 +23,9 @@ export interface DisplayConfig {
   edge_labels: 'always' | 'hover' | 'hidden';
   node_label_size: number;
   node_size: number;
+  node_size_field: string | null;
+  node_color_field: string | null;
+  node_label_field: string | null;
   node_size_mode: 'auto' | 'fixed';
   edge_label_size: number;
   label_density: number;
@@ -31,6 +34,7 @@ export interface DisplayConfig {
   label_font_url: string | null;
   show_legend: boolean;
   legend_collapsed: boolean;
+  show_fullscreen_button: boolean;
   properties_panel: 'compact' | 'cards' | 'hidden';
   selection_dimming: number;
   hide_edges_on_move: boolean;
@@ -38,6 +42,8 @@ export interface DisplayConfig {
 
 export interface LayoutConfig {
   name: 'forceatlas2' | 'force' | 'circular' | 'circlepack' | 'grid' | 'concentric' | 'hierarchical' | 'random' | 'none';
+  node_x_field: string | null;
+  node_y_field: string | null;
   iterations: number;
   gravity: number;
   scaling_ratio: number;
@@ -58,6 +64,11 @@ export interface StreamlitComponentArgs {
   height?: number;
   theme?: 'streamlit' | 'humanistic';
   config?: GraphConfig;
+}
+
+export interface SigmaGraphState {
+  clicked: { type: 'node' | 'edge'; id: string } | null;
+  selection: { nodes: string[]; edges: string[] };
 }
 
 export interface NodeInfo {
