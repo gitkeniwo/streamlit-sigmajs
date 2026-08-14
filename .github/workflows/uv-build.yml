@@ -34,13 +34,7 @@ jobs:
 
       - name: Auto-generate examples/requirements.txt
         run: |
-          VERSION=$(uv run python -c "
-          try:
-              import tomllib
-          except ImportError:
-              import tomli as tomllib
-          print(tomllib.loads(open('pyproject.toml').read())['project']['version'])
-          ")
+          VERSION=$(python3 -c "import re; print(re.search(r'^version\s*=\s*[\"\']([^\"\']+)[\"\']', open('pyproject.toml').read(), re.M).group(1))")
           cat <<EOF > examples/requirements.txt
           streamlit-sigmajs==${VERSION}
           networkx>=3.2
