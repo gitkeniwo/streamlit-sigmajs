@@ -218,7 +218,7 @@ Layouts:
 - `concentric`
 - `hierarchical`
 - `random`
-- `none` — preserve supplied `x` and `y` node properties
+- `none` — preserve coordinates selected with `node_x_field` and `node_y_field`
 
 ## Display and interaction configuration
 
@@ -232,6 +232,9 @@ config = GraphConfig(
     display=DisplayConfig(
         node_size_mode="auto",     # "auto" | "fixed"
         node_size=10,
+        node_size_field="weight",  # optional numeric property mapping
+        node_color_field="category",  # optional categorical property mapping
+        node_label_field="name",   # property used for visible node labels
         node_labels="hover",       # "auto" | "hover" | "hidden"
         edge_labels="hover",       # "always" | "hover" | "hidden"
         node_label_size=11,
@@ -243,6 +246,8 @@ config = GraphConfig(
     ),
     layout=LayoutConfig(
         name="forceatlas2",
+        node_x_field=None,          # set with node_y_field for pre-positioned data
+        node_y_field=None,
         iterations=120,
         dynamic_after_drag=True,
         drag_relaxation_ms=1000,    # maximum post-release settling time
@@ -271,13 +276,21 @@ display = DisplayConfig(
 Automatic node sizing is enabled by default. It scales nodes down for dense
 graphs and narrow components while treating `node_size` as the maximum default
 size. Set `node_size_mode="fixed"` to use the configured size at every
-component width. A positive `size` property on a node always takes precedence.
+component width. Properties are always preserved as application data; set
+`node_size_field`, `node_color_field`, `node_label_field`, `node_x_field`, or
+`node_y_field` when you explicitly want a property to control rendering.
+
+The returned component result exposes interaction state. `result.clicked` is a
+one-rerun event with `{"type": "node" | "edge", "id": ...}`, while
+`result.selection` persists the current `nodes` and `edges` arrays. Optional
+`on_clicked_change` and `on_selection_change` callbacks follow Streamlit's v2
+component callback convention.
 
 ## Run the example gallery
 
-The repository includes a gallery with property-graph, NetworkX, DataFrame,
-and Neo4j-like inputs, both themes, and an interactive configuration
-playground.
+The repository includes a single-page graph playground with sidebar controls,
+live selection details, and a comparison view for property-graph, NetworkX,
+DataFrame, and Neo4j-like inputs, themes, layouts, and display presets.
 
 Clone the repository, then run it with `uv`:
 
