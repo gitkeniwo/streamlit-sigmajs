@@ -8,6 +8,17 @@ authors = [
     { name = "gitkeniwo" },
 ]
 license-files = ["LICENSE"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Visualization",
+    "Typing :: Typed",
+]
 dependencies = [
     "streamlit>=1.51.0",
 ]
@@ -41,4 +52,4 @@ build-backend = "setuptools.build_meta"
 include = ["st_sigma*"]
 
 [tool.setuptools.package-data]
-st_sigma = ["pyproject.toml", "frontend/build/*", "frontend/build/**/*"]
+st_sigma = ["py.typed", "pyproject.toml", "frontend/build/*", "frontend/build/**/*"]
