@@ -1,7 +1,16 @@
 from datetime import date
+import json
 from pathlib import Path
+try:
+    import tomllib
+except ModuleNotFoundError:  # Python 3.10
+    import tomli as tomllib
 
-from st_sigma import neo4jgraph_to_sigma, serialize_neo4j_value
+from st_sigma import (
+    _inline_javascript_with_chunks,
+    neo4jgraph_to_sigma,
+    serialize_neo4j_value,
+)
 
 
 class FakeNode(dict):
@@ -89,3 +98,30 @@ def test_component_v2_manifest_and_assets_are_packaged():
     assert 'name = "sigma_graph"' in manifest.read_text(encoding="utf-8")
     assert len(list(build_dir.glob("index-*.js"))) == 1
     assert len(list(build_dir.glob("style-*.css"))) == 1
+    assert len(list(build_dir.glob("dagre*.js"))) == 1
+
+
+def test_editable_install_fallback_inlines_dynamic_chunks():
+    build_dir = Path(__file__).parents[1] / "st_sigma" / "frontend" / "build"
+    entry = next(build_dir.glob("index-*.js"))
+
+    javascript = _inline_javascript_with_chunks(build_dir, entry)
+
+    assert 'import("./dagre' not in javascript
+    assert 'import("data:text/javascript;base64,' in javascript
+
+
+def test_all_package_versions_match():
+    root = Path(__file__).parents[1]
+    root_version = tomllib.loads((root / "pyproject.toml").read_text())["project"]["version"]
+    manifest_version = tomllib.loads(
+        (root / "st_sigma" / "pyproject.toml").read_text()
+    )["project"]["version"]
+    frontend_version = json.loads(
+        (root / "st_sigma" / "frontend" / "package.json").read_text()
+    )["version"]
+    lock_version = json.loads(
+        (root / "st_sigma" / "frontend" / "package-lock.json").read_text()
+    )["version"]
+
+    assert root_version == manifest_version == frontend_version == lock_version

@@ -7,6 +7,48 @@ from typing import Any
 from .schema import PropertyGraph, PropertyGraphEdge, PropertyGraphNode
 
 
+def _duplicates(values: list[str]) -> list[str]:
+    seen: set[str] = set()
+    duplicates: set[str] = set()
+    for value in values:
+        if value in seen:
+            duplicates.add(value)
+        seen.add(value)
+    return sorted(duplicates)
+
+
+def _validate_graph(graph: PropertyGraph) -> PropertyGraph:
+    """Validate identifiers and references before data reaches Graphology."""
+    node_ids = [node["id"] for node in graph["nodes"]]
+    edge_ids = [edge["id"] for edge in graph["edges"]]
+
+    if duplicates := _duplicates(node_ids):
+        raise ValueError(f"Duplicate node IDs are not allowed: {duplicates}")
+    if duplicates := _duplicates(edge_ids):
+        raise ValueError(f"Duplicate edge IDs are not allowed: {duplicates}")
+
+    known_nodes = set(node_ids)
+    dangling = sorted(
+        {
+            edge["id"]
+            for edge in graph["edges"]
+            if edge["source"] not in known_nodes or edge["target"] not in known_nodes
+        }
+    )
+    if dangling:
+        details = [
+            f"{edge['id']} ({edge['source']} -> {edge['target']})"
+            for edge in graph["edges"]
+            if edge["id"] in dangling
+        ]
+        raise ValueError(
+            "Edges must reference existing node IDs; dangling edges: "
+            + ", ".join(details)
+        )
+
+    return graph
+
+
 def serialize_value(value: Any) -> Any:
     """Return a JSON-safe representation of common graph property values."""
     if hasattr(value, "isoformat"):
@@ -91,7 +133,7 @@ def from_mapping(graph: Mapping[str, Any]) -> PropertyGraph:
             "properties": _properties(raw, {"id", "identity", "source", "target", "start", "end", "type", "label", "directed", "properties"}),
             "directed": bool(raw.get("directed", True)),
         })
-    return {"nodes": nodes, "edges": edges}
+    return _validate_graph({"nodes": nodes, "edges": edges})
 
 
 def from_neo4j(graph: Any) -> PropertyGraph:
@@ -109,7 +151,7 @@ def from_neo4j(graph: Any) -> PropertyGraph:
         "properties": serialize_value(dict(rel)),
         "directed": True,
     } for rel in graph.relationships]
-    return {"nodes": nodes, "edges": edges}
+    return _validate_graph({"nodes": nodes, "edges": edges})
 
 
 def from_networkx(graph: Any) -> PropertyGraph:
@@ -118,13 +160,14 @@ def from_networkx(graph: Any) -> PropertyGraph:
     nodes: list[PropertyGraphNode] = []
     for node_id, attributes in graph.nodes(data=True):
         properties = serialize_value(dict(attributes))
-        raw_labels = properties.pop("labels", properties.pop("label", "Node"))
+        raw_labels = properties.pop("labels", None)
+        if raw_labels is None:
+            raw_labels = properties.pop("label", "Node")
         labels = (
             list(raw_labels)
             if isinstance(raw_labels, (list, tuple, set))
             else [raw_labels]
         )
-        properties.setdefault("name", str(node_id))
         nodes.append({"id": str(node_id), "labels": [str(item) for item in labels], "properties": properties})
 
     raw_edges = graph.edges(keys=True, data=True) if graph.is_multigraph() else (
@@ -134,10 +177,13 @@ def from_networkx(graph: Any) -> PropertyGraph:
     edges: list[PropertyGraphEdge] = []
     for source, target, key, attributes in raw_edges:
         properties = serialize_value(dict(attributes))
-        edge_type = str(properties.pop("type", properties.pop("label", "CONNECTED_TO")))
+        raw_type = properties.pop("type", None)
+        if raw_type is None:
+            raw_type = properties.pop("label", "CONNECTED_TO")
+        edge_type = str(raw_type)
         edge_id = properties.pop("id", f"{source}-{target}-{key}")
         edges.append({"id": str(edge_id), "source": str(source), "target": str(target), "type": edge_type, "properties": properties, "directed": directed})
-    return {"nodes": nodes, "edges": edges}
+    return _validate_graph({"nodes": nodes, "edges": edges})
 
 
 def from_dataframes(nodes: Any, edges: Any) -> PropertyGraph:

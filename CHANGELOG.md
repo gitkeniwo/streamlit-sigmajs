@@ -4,8 +4,42 @@ Notable changes to `streamlit-sigmajs` are documented here.
 
 ## Unreleased
 
+### Added
+
+- Added explicit `node_size_field`, `node_color_field`, `node_label_field`,
+  `node_x_field`, and `node_y_field` mappings so application properties are no
+  longer interpreted as rendering attributes implicitly.
+- Added node and edge click events plus persistent selection state to the
+  component result, with optional Streamlit callbacks.
+- Added frontend regression tests for color generation, theme token handling,
+  graph conversion, and component lifecycle behavior.
+
+### Fixed
+
+- Generated Sigma-compatible hex colors for categories beyond the built-in
+  palette and offset overflow hues to avoid immediately repeating its first
+  color.
+- Made the Sigma canvas follow Streamlit theme variables and runtime light/dark
+  changes, including safe fallbacks for `unset`, `inherit`, and `initial` CSS
+  values.
+- Preserved NetworkX `label` properties when `labels` or `type` takes structural
+  precedence instead of eagerly removing both fields.
+- Added readable duplicate node/edge ID and dangling-edge validation before
+  rendering.
+- Kept dragged nodes from sticking when pointer release happens outside the
+  component.
+- Removed post-drag graph-bounds recomputation that caused the viewport to jump
+  when relaxation ended.
+- Prevented display-only configuration changes from rebuilding Sigma or
+  rerunning the layout, and made fallback coordinates deterministic.
+- Used Sigma's non-indexing refresh path for reducer-only hover and selection
+  updates.
+
 ### Changed
 
+- Redesigned the example app as a single-page playground with sidebar controls,
+  compact non-default code snippets, comparison grids, and visible click and
+  selection state.
 - Enabled post-drag layout relaxation by default.
 - Replaced the per-frame stateless force solver with real-time local spring
   physics during dragging and velocity-based settling after release.
@@ -21,12 +55,24 @@ Notable changes to `streamlit-sigmajs` are documented here.
   setting for dense graphs and small graph components.
 - Moved Playground controls beside the graph and kept the sidebar for page
   navigation only.
+- Loaded Dagre only for hierarchical layouts and added a version consistency
+  check across Python, component-manifest, and frontend package metadata.
+- Node labels now use only `DisplayConfig.node_label_field` (default `"name"`)
+  and fall back to node IDs; NetworkX conversion no longer injects synthetic
+  `name` properties.
 
 ### Compatibility
 
 - `LayoutConfig.drag_solver` has been removed. Drag interactions now always use
   the layout-preserving local spring model; initial `name="forceatlas2"`
   placement remains available.
+- Node labels no longer implicitly fall back through `name`, `label`, and
+  `title`. The default mapping reads only `name`; graphs that use `label` or
+  `title` as display text must set `node_label_field` explicitly.
+- Invalid graphs with duplicate IDs or edges referencing missing endpoint nodes
+  now raise `ValueError`. This intentionally changes the legacy
+  `st_sigmagraph()` behavior, which previously rendered such inputs partially
+  by silently dropping dangling edges.
 
 ## [0.2.0] - 2026-08-13
 

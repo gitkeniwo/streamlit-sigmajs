@@ -14,11 +14,13 @@ cd ../..
 uv run --extra examples streamlit run examples/app.py
 ```
 
-The gallery opens with a large configurable graph and keeps its controls in a
-column beside the graph. The sidebar is reserved for page navigation. The
-other pages present themes, supported Python inputs, layout families, and
-low-clutter display presets. Each page includes a minimal ``st_sigma`` code
-example.
+The gallery is a single-page app with two views. Playground keeps a large,
+interactive graph visible while its dataset, theme, layout, and detailed
+controls live in the sidebar. Compare presents themes, supported Python inputs,
+all layout options, and low-clutter display presets in two-column grids. Code
+examples show only settings that differ from the defaults, with the full
+configuration still available on demand. The page also exposes normalized
+data and the component's persistent selection state.
 
 The examples use public datasets bundled with NetworkX, an original synthetic
 supply-chain graph, and a small Neo4j-compatible structural example.

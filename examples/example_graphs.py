@@ -99,8 +99,16 @@ def davis_southern_women() -> tuple[pd.DataFrame, pd.DataFrame]:
 def les_miserables() -> nx.Graph:
     graph = nx.les_miserables_graph()
     for node_id, data in graph.nodes(data=True):
+        degree = graph.degree(node_id)
         data["name"] = str(node_id)
-        data["label"] = "Character"
+        data["label"] = (
+            "Principal"
+            if degree >= 15
+            else "Supporting"
+            if degree >= 5
+            else "Minor"
+        )
+        data["size"] = 6 + min(degree, 18)
     return graph
 
 

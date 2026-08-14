@@ -1,5 +1,7 @@
-from pathlib import Path
+import base64
+from collections.abc import Callable
 from dataclasses import asdict
+from pathlib import Path
 from typing import Any, Literal
 
 import streamlit as st
@@ -35,6 +37,27 @@ __all__ = [
 ]
 
 
+def _inline_javascript_with_chunks(build_dir: Path, entry_file: Path) -> str:
+    """Inline relative Vite chunks for the editable-install fallback.
+
+    This development-only path uses ``data:`` module imports. Deployments with
+    a CSP that blocks ``data:`` scripts should use the packaged manifest assets.
+    """
+    javascript = entry_file.read_text(encoding="utf-8")
+    for chunk in build_dir.glob("*.js"):
+        if chunk == entry_file:
+            continue
+        relative_reference = f'"./{chunk.name}"'
+        if relative_reference not in javascript:
+            continue
+        encoded = base64.b64encode(chunk.read_bytes()).decode("ascii")
+        javascript = javascript.replace(
+            relative_reference,
+            f'"data:text/javascript;base64,{encoded}"',
+        )
+    return javascript
+
+
 def _register_component():
     """Register packaged assets, with an inline fallback for editable installs."""
     try:
@@ -54,7 +77,7 @@ def _register_component():
             raise
         return st.components.v2.component(
             "streamlit-sigmajs.sigma_graph",
-            js=js_files[0].read_text(encoding="utf-8"),
+            js=_inline_javascript_with_chunks(build_dir, js_files[0]),
             # A line break makes the minified stylesheet unambiguously inline
             # to Streamlit's path/content classifier.
             css="/* editable-install fallback */\n"
@@ -104,6 +127,8 @@ def sigma_graph(
     layout: str | LayoutConfig | None = None,
     config: GraphConfig | None = None,
     key: str | None = None,
+    on_clicked_change: Callable[[], None] | None = None,
+    on_selection_change: Callable[[], None] | None = None,
 ) -> Any:
     """Render an interactive property graph in a Streamlit app.
 
@@ -141,12 +166,18 @@ def sigma_graph(
     key : str or None, default=None
         Stable Streamlit component key. Supply a unique key when rendering
         multiple graphs or when the same graph survives application reruns.
+    on_clicked_change : callable or None, default=None
+        Optional Streamlit callback invoked after a node or edge click. Read
+        ``result.clicked`` for ``{"type": "node" | "edge", "id": str}``.
+    on_selection_change : callable or None, default=None
+        Optional Streamlit callback invoked when the current selection changes.
+        Read ``result.selection`` for ``{"nodes": [...], "edges": [...]}``.
 
     Returns
     -------
     streamlit.components.v2.component.ComponentResult
-        Persistent Streamlit component state. The interaction-result surface
-        is reserved for future callback support.
+        Component state with a one-rerun ``clicked`` trigger and persistent
+        ``selection`` containing selected node and edge IDs.
 
     Raises
     ------
@@ -170,15 +201,21 @@ def sigma_graph(
         raise ValueError("theme must be 'streamlit' or 'humanistic'.")
     graph_data = normalize_graph(graph, edges=edges)
     resolved_config = resolve_config(config, layout)
-    return _component_func(
-        key=key,
-        data={
+    component_args: dict[str, Any] = {
+        "key": key,
+        "data": {
             "graphData": graph_data,
             "height": height,
             "theme": theme,
             "config": asdict(resolved_config),
         },
-    )
+    }
+    if on_clicked_change is not None:
+        component_args["on_clicked_change"] = on_clicked_change
+    if on_selection_change is not None:
+        component_args["on_selection_change"] = on_selection_change
+    return _component_func(**component_args)
+
 
 def st_sigmagraph(graphData=None, height=600, theme="humanistic", key=None):
     """Render a graph with the legacy v0.1 API.
@@ -203,8 +240,7 @@ def st_sigmagraph(graphData=None, height=600, theme="humanistic", key=None):
     Returns
     -------
     streamlit.components.v2.component.ComponentResult
-        Persistent component state. Interaction values will be added to this
-        result as the public API evolves.
+        Component state including click and selection values.
 
     """
     if graphData is None:

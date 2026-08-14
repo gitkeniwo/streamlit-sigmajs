@@ -13,10 +13,7 @@ interface DynamicPropertiesProps {
 }
 
 const DynamicProperties: React.FC<DynamicPropertiesProps> = ({ properties }) => {
-  // 过滤掉一些内部属性（如果需要）
-  const filteredProperties = Object.entries(properties).filter(
-    ([key]) => !['size', 'baseSize', 'baseColor'].includes(key)
-  );
+  const filteredProperties = Object.entries(properties);
 
   if (filteredProperties.length === 0) {
     return <p className="no-properties">No properties available</p>;

@@ -1,9 +1,9 @@
-import dagre from '@dagrejs/dagre';
 import Graph from 'graphology';
-import { circlepack, circular, random } from 'graphology-layout';
+import { circlepack, circular } from 'graphology-layout';
 import forceLayout from 'graphology-layout-force';
 import forceAtlas2 from 'graphology-layout-forceatlas2';
 
+import { deterministicPosition } from './graphDataUtils';
 import { LayoutConfig } from './types';
 
 export interface ForceAtlasSettings {
@@ -12,6 +12,16 @@ export interface ForceAtlasSettings {
   linLogMode: boolean;
   strongGravityMode: boolean;
 }
+
+const resetInitialPositions = (graph: Graph): void => {
+  graph.forEachNode((node, attributes) => {
+    const fallback = deterministicPosition(node);
+    graph.mergeNodeAttributes(node, {
+      x: Number.isFinite(attributes.initialX) ? attributes.initialX : fallback.x,
+      y: Number.isFinite(attributes.initialY) ? attributes.initialY : fallback.y,
+    });
+  });
+};
 
 const assignGrid = (graph: Graph): void => {
   const nodes = graph.nodes();
@@ -46,7 +56,11 @@ const assignConcentric = (graph: Graph): void => {
   }
 };
 
-const assignHierarchical = (graph: Graph, direction: LayoutConfig['hierarchy_direction']): void => {
+const assignHierarchical = async (
+  graph: Graph,
+  direction: LayoutConfig['hierarchy_direction'],
+): Promise<void> => {
+  const { default: dagre } = await import('@dagrejs/dagre');
   const layoutGraph = new dagre.graphlib.Graph({ multigraph: true });
   layoutGraph.setGraph({
     rankdir: direction,
@@ -72,24 +86,20 @@ const assignHierarchical = (graph: Graph, direction: LayoutConfig['hierarchy_dir
   });
 };
 
-export const applyInitialLayout = (
+export const applyInitialLayout = async (
   graph: Graph,
   config: LayoutConfig,
   forceAtlasSettings: ForceAtlasSettings,
-): void => {
+): Promise<void> => {
+  resetInitialPositions(graph);
   switch (config.name) {
     case 'forceatlas2':
       if (config.iterations > 0) {
-        forceAtlas2.assign(graph, {
-          iterations: config.iterations,
-          settings: forceAtlasSettings,
-        });
+        forceAtlas2.assign(graph, { iterations: config.iterations, settings: forceAtlasSettings });
       }
       break;
     case 'force':
-      if (config.iterations > 0) {
-        forceLayout.assign(graph, { maxIterations: config.iterations });
-      }
+      if (config.iterations > 0) forceLayout.assign(graph, { maxIterations: config.iterations });
       break;
     case 'circular':
       circular.assign(graph);
@@ -104,10 +114,12 @@ export const applyInitialLayout = (
       assignConcentric(graph);
       break;
     case 'hierarchical':
-      assignHierarchical(graph, config.hierarchy_direction);
+      await assignHierarchical(graph, config.hierarchy_direction);
       break;
     case 'random':
-      random.assign(graph);
+      graph.forEachNode((node) => {
+        graph.mergeNodeAttributes(node, deterministicPosition(node, 'random-layout'));
+      });
       break;
     case 'none':
       break;

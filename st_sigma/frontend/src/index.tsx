@@ -2,7 +2,7 @@ import type { FrontendRenderer, FrontendState } from "@streamlit/component-v2-li
 import { StrictMode } from "react"
 import { createRoot, type Root } from "react-dom/client"
 import InteractiveGraph from "./components/InteractiveGraph"
-import type { StreamlitComponentArgs } from "./utils/types"
+import type { SigmaGraphState, StreamlitComponentArgs } from "./utils/types"
 import "./App.css"
 
 interface MountedComponent {
@@ -13,9 +13,11 @@ interface MountedComponent {
 
 const mountedComponents = new WeakMap<HTMLElement | ShadowRoot, MountedComponent>()
 
-const renderSigmaGraph: FrontendRenderer<FrontendState, StreamlitComponentArgs> = ({
+const renderSigmaGraph: FrontendRenderer<FrontendState & SigmaGraphState, StreamlitComponentArgs> = ({
   data,
   parentElement,
+  setStateValue,
+  setTriggerValue,
 }) => {
   let mounted = mountedComponents.get(parentElement)
   if (!mounted) {
@@ -30,7 +32,12 @@ const renderSigmaGraph: FrontendRenderer<FrontendState, StreamlitComponentArgs> 
 
   mounted.root.render(
     <StrictMode>
-      <InteractiveGraph args={data} />
+      <InteractiveGraph
+        args={data}
+        onNodeClick={(id) => setTriggerValue("clicked", { type: "node", id })}
+        onEdgeClick={(id) => setTriggerValue("clicked", { type: "edge", id })}
+        onSelectionChange={(nodes, edges) => setStateValue("selection", { nodes, edges })}
+      />
     </StrictMode>,
   )
 

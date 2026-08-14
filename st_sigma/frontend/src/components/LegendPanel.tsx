@@ -16,6 +16,7 @@ export interface LegendPanelProps {
   relationshipTypes: RelationshipType[];
   graphOrder: number;
   graphSize: number;
+  nodeTypeTitle?: string;
   initiallyCollapsed?: boolean;
 }
 
@@ -24,6 +25,7 @@ const LegendPanel: React.FC<LegendPanelProps> = ({
   relationshipTypes,
   graphOrder, 
   graphSize,
+  nodeTypeTitle = 'Labels',
   initiallyCollapsed = true,
 }) => {
   const [visible, setVisible] = useState(!initiallyCollapsed);
@@ -54,7 +56,7 @@ const LegendPanel: React.FC<LegendPanelProps> = ({
         <>
           {/* 节点类型 - 紧凑版 */}
           <div className="legend-section">
-            <h4 className="legend-section-title">Labels</h4>
+            <h4 className="legend-section-title">{nodeTypeTitle}</h4>
             <div className="legend-items-compact">
               {nodeTypes.map((nodeType) => (
                 <div key={nodeType.type} className="legend-item-compact">
