@@ -40,8 +40,19 @@ class DisplayConfig:
     node_label_size : int, default=12
         Node-label font size in CSS pixels. Must be positive.
     node_size : float, default=10
-        Default node radius in screen pixels. A positive ``size`` property on
-        an individual node takes precedence.
+        Default node radius in screen pixels. Use ``node_size_field`` to map a
+        numeric property to individual node sizes.
+    node_size_field : str or None, default=None
+        Optional property name containing a positive numeric node size. Node
+        properties are otherwise treated as application data and never
+        interpreted as rendering attributes.
+    node_color_field : str or None, default=None
+        Optional categorical property name used to color nodes. Values are
+        assigned colors from the active theme palette. When omitted, nodes are
+        colored by their primary label.
+    node_label_field : str or None, default="name"
+        Optional property name used as the visible node label. Missing values
+        fall back to the node ID. Set to ``None`` to always label nodes by ID.
     node_size_mode : {"auto", "fixed"}, default="auto"
         ``"auto"`` reduces the default node size when the graph is dense or
         its component is narrow. ``"fixed"`` always uses ``node_size``.
@@ -65,6 +76,10 @@ class DisplayConfig:
     legend_collapsed : bool, default=True
         Start the legend in its compact collapsed state. Has no effect when
         ``show_legend`` is false.
+    show_fullscreen_button : bool, default=True
+        Show a control that expands the graph over the current browser viewport
+        without entering system fullscreen. Pressing Escape restores the
+        component size.
     properties_panel : {"compact", "cards", "hidden"}, default="compact"
         Choose the node and edge property inspector. ``"compact"`` uses a
         dense key/value layout, ``"cards"`` gives each property more space,
@@ -95,9 +110,13 @@ class DisplayConfig:
     label_font_url: str | None = None
     show_legend: bool = True
     legend_collapsed: bool = True
+    show_fullscreen_button: bool = True
     properties_panel: PropertiesPanelMode = "compact"
     selection_dimming: float = 0.68
     hide_edges_on_move: bool = False
+    node_size_field: str | None = None
+    node_color_field: str | None = None
+    node_label_field: str | None = "name"
 
     def __post_init__(self) -> None:
         if self.node_labels not in {"auto", "hover", "hidden"}:
@@ -112,6 +131,10 @@ class DisplayConfig:
             raise ValueError("Label sizes must be positive.")
         if self.node_size <= 0:
             raise ValueError("node_size must be positive.")
+        for field_name in ("node_size_field", "node_color_field", "node_label_field"):
+            value = getattr(self, field_name)
+            if value is not None and not value.strip():
+                raise ValueError(f"{field_name} must be None or a non-empty property name.")
         if not self.label_font_family.strip():
             raise ValueError("label_font_family must not be empty.")
         if self.label_font_url is not None and not self.label_font_url.strip():
@@ -139,7 +162,14 @@ class LayoutConfig:
         - ``"concentric"``: place high-degree nodes near the center.
         - ``"hierarchical"``: a layered Dagre layout.
         - ``"random"``: assign random coordinates.
-        - ``"none"``: preserve node ``x`` and ``y`` properties when supplied.
+        - ``"none"``: preserve coordinates mapped by ``node_x_field`` and
+          ``node_y_field`` when supplied.
+
+    node_x_field : str or None, default=None
+        Optional node property containing the initial x coordinate.
+    node_y_field : str or None, default=None
+        Optional node property containing the initial y coordinate. Set both
+        coordinate fields with ``name="none"`` for pre-positioned graphs.
 
     iterations : int, default=100
         Number of synchronous iterations used by the initial
@@ -186,6 +216,8 @@ class LayoutConfig:
     dynamic_after_drag: bool = True
     drag_relaxation_ms: int = 1000
     hierarchy_direction: HierarchyDirection = "TB"
+    node_x_field: str | None = None
+    node_y_field: str | None = None
 
     def __post_init__(self) -> None:
         if self.name not in {
@@ -208,6 +240,12 @@ class LayoutConfig:
             raise ValueError("gravity must be non-negative and scaling_ratio positive.")
         if self.drag_relaxation_ms < 0:
             raise ValueError("drag_relaxation_ms must be non-negative.")
+        for field_name in ("node_x_field", "node_y_field"):
+            value = getattr(self, field_name)
+            if value is not None and not value.strip():
+                raise ValueError(f"{field_name} must be None or a non-empty property name.")
+        if (self.node_x_field is None) != (self.node_y_field is None):
+            raise ValueError("node_x_field and node_y_field must be set together.")
 
 
 @dataclass(frozen=True)
