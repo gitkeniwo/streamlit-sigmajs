@@ -15,9 +15,7 @@ interface DynamicPropertiesProps {
 }
 
 const DynamicProperties: React.FC<DynamicPropertiesProps> = ({ properties }) => {
-  const filteredProperties = Object.entries(properties).filter(
-    ([key]) => !['size', 'baseSize', 'baseColor'].includes(key)
-  );
+  const filteredProperties = Object.entries(properties);
 
   if (filteredProperties.length === 0) {
     return <p className="no-properties">No properties available</p>;

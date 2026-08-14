@@ -29,6 +29,23 @@
   --graph-accent: #cc8b65;
 }
 
+.graph-container.is-expanded {
+  position: fixed;
+  inset: 0;
+  z-index: 1000000;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  background: var(--graph-background);
+  border-radius: 0;
+}
+
+.graph-container.is-expanded .content-wrapper {
+  flex: 1 1 auto;
+  width: 100%;
+  height: 100% !important;
+}
+
 .header {
   padding: 24px 40px;
   background-color: var(--graph-background);
@@ -77,8 +94,13 @@
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.04);
   z-index: 1000;
   border: 1px solid var(--graph-border);
+}
+
+.legend-panel.is-expanded {
+  box-sizing: border-box;
   max-height: calc(100% - (2 * var(--graph-frame-inset)) - (2 * var(--graph-overlay-gap)));
   overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .legend-panel.is-collapsed {
@@ -109,6 +131,10 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background-color: var(--graph-panel-translucent);
   margin-bottom: 8px;
   padding-bottom: 6px;
   border-bottom: 1px solid var(--graph-border);
@@ -138,6 +164,45 @@
 .legend-toggle-button:hover {
   background-color: var(--graph-surface-hover);
   color: var(--graph-text);
+}
+
+.expand-toggle-button {
+  position: absolute;
+  top: calc(var(--graph-frame-inset) + var(--graph-overlay-gap));
+  right: calc(var(--graph-frame-inset) + var(--graph-overlay-gap));
+  z-index: 1001;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 7px;
+  color: var(--graph-text-muted);
+  background-color: var(--graph-panel-translucent);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--graph-border);
+  border-radius: 9px;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.08);
+  cursor: pointer;
+}
+
+.expand-toggle-button:hover {
+  color: var(--graph-text);
+  background-color: var(--graph-surface-hover);
+}
+
+.expand-toggle-button:focus-visible {
+  outline: 2px solid var(--graph-accent);
+  outline-offset: 2px;
+}
+
+.expand-toggle-button svg {
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
 }
 
 /* Legend Section - 紧凑版 */
