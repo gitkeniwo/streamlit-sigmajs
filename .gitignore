@@ -5,6 +5,7 @@ __pycache__/
 .venv/
 build/
 dist/
+.pytest_cache/
 
 # Frontend
 node_modules/
@@ -18,3 +19,6 @@ st_sigma/frontend/build/
 
 # Downloaded or materialized example datasets
 examples/data/
+.claude/
+.agent/
+.code-review-graph/
