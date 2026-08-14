@@ -123,5 +123,7 @@ def test_all_package_versions_match():
     lock_version = json.loads(
         (root / "st_sigma" / "frontend" / "package-lock.json").read_text()
     )["version"]
+    examples_reqs = (root / "examples" / "requirements.txt").read_text()
 
     assert root_version == manifest_version == frontend_version == lock_version
+    assert f"streamlit-sigmajs=={root_version}" in examples_reqs

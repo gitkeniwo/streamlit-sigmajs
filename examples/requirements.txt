@@ -1,0 +1,3 @@
+streamlit-sigmajs==0.3.0
+networkx>=3.2
+pandas>=2.0
